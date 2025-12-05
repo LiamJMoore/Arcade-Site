@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Find Alon | RoastMe.fun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body { 
+            background: #050201; 
+            color: white; 
+            font-family: 'Press Start 2P', cursive; 
+            text-align: center; 
+            overflow: hidden; 
+            touch-action: none;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* The Grid of Characters */
+        #grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .char {
+            font-size: 40px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            padding: 10px;
+            filter: grayscale(0.5);
+        }
+        .char:hover { transform: scale(1.2); filter: grayscale(0); }
+        
+        /* Alon Character */
+        .alon {
+            filter: drop-shadow(0 0 5px #f97316);
+            animation: pulse 1s infinite alternate;
+        }
+        
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+        /* UI */
+        .hud {
+            position: absolute; top: 20px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 30px;
+            pointer-events: none; z-index: 20;
+        }
+        .hud-text { color: #f97316; text-shadow: 2px 2px 0 #000; font-size: 14px; }
+
+        /* Screens */
+        #start-screen, #game-over, #level-up {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50;
+        }
+        .hidden { display: none !important; }
+
+        .btn { 
+            background: #f97316; color: black; border: none; 
+            padding: 15px 30px; font-family: inherit; font-size: 14px;
+            margin-top: 20px; cursor: pointer; border-radius: 8px;
+            box-shadow: 0 4px 0 #c2410c; transition: transform 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: none; }
+        
+        .btn-exit {
+            background: transparent; color: #666; border: 2px solid #333; box-shadow: none;
+            margin-top: 10px; font-size: 10px; padding: 12px;
+        }
+        .btn-exit:hover { color: white; border-color: white; }
+
+        /* Floating Text */
+        .float-text {
+            position: absolute; pointer-events: none; font-size: 20px; color: #22c55e;
+            animation: floatUp 0.8s forwards; z-index: 30;
+        }
+        @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
+
+        /* Distractions */
+        .distraction { animation: shake 2s infinite; }
+        @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="hud">
+            <div class="hud-text">LEVEL: <span id="levelVal">1</span></div>
+            <div class="hud-text">TIME: <span id="timeVal" class="text-white">10</span>s</div>
+        </div>
+
+        <div id="grid"></div>
+
+        <div id="start-screen">
+            <h1 class="text-3xl text-[#f97316] mb-4">FIND ALON</h1>
+            <p class="text-[10px] text-gray-400 mb-6 max-w-md leading-6">
+                Alon is hiding from the FUD.<br>
+                Spot him before he rugs.<br>
+                (He's the guy in the yellow hat 🧢)
+            </p>
+            <div class="text-6xl mb-6 animate-bounce">🧢</div> 
+            <button class="btn" onclick="startGame()">START SEARCH</button>
+        </div>
+
+        <div id="level-up" class="hidden">
+            <h1 class="text-2xl text-[#22c55e] mb-2">FOUND HIM!</h1>
+            <p class="text-xs text-gray-300">Next level is harder...</p>
+        </div>
+
+        <div id="game-over" class="hidden">
+            <h1 class="text-3xl text-red-500 mb-4">HE ESCAPED!</h1>
+            <p class="text-[10px] text-gray-400 mb-6">"Dev sold. Project dead."</p>
+            <div class="text-sm mb-4">LEVEL REACHED: <span id="finalLevel">1</span></div>
+            <button class="btn" onclick="resetGame()">TRY AGAIN</button>
+            <button class="btn btn-exit" onclick="window.location.href='index.html'">EXIT TO LOBBY</button>
+        </div>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const timeEl = document.getElementById('timeVal');
+        const levelEl = document.getElementById('levelVal');
+        
+        let level = 1;
+        let timeLeft = 10;
+        let timerInterval;
+        let isPlaying = false;
+
+        // Character Pool (Decoys)
+        const decoys = ['🐻', '🤡', '📉', '💸', '🧱', '👮', '🧟', '🧛', '🤖', '👺'];
+        // "Alon" character (Visual representation)
+        // In a real asset scenario, this would be an <img> tag. For now, using closest Emoji combo or image.
+        // If you upload an image for Alon, change this logic to use an <img> tag.
+        // Using the Hat emoji as "Alon" based on the prompt's implication of the yellow hat image.
+        const ALON_CHAR = '🧢'; 
+
+        function generateLevel() {
+            grid.innerHTML = '';
+            
+            // Difficulty Scaling
+            const cols = Math.min(3 + level, 8); // Max 8 cols
+            const rows = Math.min(3 + Math.floor(level/2), 6); // Max 6 rows
+            const totalCells = cols * rows;
+            
+            // Place Alon at random index
+            const alonIndex = Math.floor(Math.random() * totalCells);
+
+            for(let i=0; i<totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('char');
+                
+                // Randomize font size slightly for chaos
+                const size = 30 + Math.random() * 20;
+                cell.style.fontSize = size + 'px';
+
+                if(i === alonIndex) {
+                    // It's Alon
+                    cell.innerText = ALON_CHAR;
+                    cell.classList.add('alon');
+                    cell.onclick = foundAlon;
+                    
+                    // Use Image if available (Uncomment below if you have 'alon.png')
+                    // cell.innerHTML = '<img src="image_a29f06.png" style="width:50px; height:50px; border-radius:50%;">'; 
+                } else {
+                    // Decoy
+                    cell.innerText = decoys[Math.floor(Math.random() * decoys.length)];
+                    if(Math.random() > 0.8) cell.classList.add('distraction'); // Wiggle some decoys
+                    cell.onclick = wrongClick;
+                }
+                
+                grid.appendChild(cell);
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            // Time gets shorter as level goes up, min 3 seconds
+            timeLeft = Math.max(10 - (level * 0.5), 3); 
+            timeEl.innerText = timeLeft.toFixed(1);
+            
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                timeEl.innerText = Math.abs(timeLeft).toFixed(1);
+                
+                if(timeLeft <= 0) {
+                    gameOver();
+                }
+            }, 100);
+        }
+
+        function foundAlon(e) {
+            if(!isPlaying) return;
+            clearInterval(timerInterval);
+            
+            // Visual Feedback
+            const floatText = document.createElement('div');
+            floatText.innerText = "+1 LEVEL";
+            floatText.className = "float-text";
+            floatText.style.left = e.clientX + 'px';
+            floatText.style.top = e.clientY + 'px';
+            document.body.appendChild(floatText);
+            
+            // Level Up Screen (Brief flash)
+            const lvlScreen = document.getElementById('level-up');
+            lvlScreen.classList.remove('hidden');
+            
+            setTimeout(() => {
+                lvlScreen.classList.add('hidden');
+                level++;
+                levelEl.innerText = level;
+                generateLevel();
+                startTimer();
+            }, 800);
+        }
+
+        function wrongClick(e) {
+            if(!isPlaying) return;
+            // Penalty
+            timeLeft -= 1;
+            const floatText = document.createElement('div');
+            floatText.innerText = "-1s";
+            floatText.className = "float-text";
+            floatText.style.color = "red";
+            floatText.style.left = e.clientX + 'px';
+            floatText.style.top = e.clientY + 'px';
+            document.body.appendChild(floatText);
+            
+            // Shake screen
+            document.body.style.transform = "translate(5px, 0)";
+            setTimeout(() => document.body.style.transform = "none", 50);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over').classList.add('hidden');
+            level = 1;
+            levelEl.innerText = level;
+            isPlaying = true;
+            generateLevel();
+            startTimer();
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            document.getElementById('finalLevel').innerText = level;
+            document.getElementById('game-over').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
