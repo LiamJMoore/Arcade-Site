@@ -3,84 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Paper Hands Shooter | RoastMe.fun</title>
+    <title>Jeet Shooter | RoastMe.fun</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="12.png" type="image/png">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { background: #050201; color: white; font-family: 'Press Start 2P', cursive; overflow: hidden; touch-action: none; }
         
-        #game-container { 
-            position: relative; width: 100vw; height: 100vh; 
-            display: flex; justify-content: center; align-items: center; 
-        }
-        
-        canvas { 
-            background: #0f0502; 
-            border-left: 2px solid #f97316; 
-            border-right: 2px solid #f97316; 
-            box-shadow: 0 0 30px rgba(249, 115, 22, 0.2); 
-            width: 100%; height: 100%; max-width: 600px;
+        :root {
+            --pump-bg: #050201;
+            --pump-green: #86efac;
+            --pump-red: #ef4444;
+            --pump-blue: #3b82f6;
         }
 
-        .ui { position: absolute; top: 20px; left: 20px; color: #f97316; z-index: 10; font-size: 14px; }
-        
-        /* IMPROVED GAME OVER SCREEN */
-        #game-over { 
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--pump-bg);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #020408 0%, #0f172a 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            background: rgba(0,0,0,0.5);
+            border-left: 2px solid var(--pump-green);
+            border-right: 2px solid var(--pump-green);
+            box-shadow: 0 0 50px rgba(134, 239, 172, 0.1);
+            max-width: 600px;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Layer */
+        #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); 
-            display: none; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 50; 
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 20px; z-index: 20;
         }
-        
-        .btn { 
-            background: #f97316; color: black; border: none; 
-            padding: 20px 40px; font-family: inherit; font-size: 16px; 
-            margin-top: 20px; cursor: pointer; border-radius: 8px;
-            transition: transform 0.1s;
+
+        /* Navigation */
+        .nav-btn {
+            pointer-events: auto;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 12px; border-radius: 8px;
+            color: white; border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s; font-size: 10px; display: flex; gap: 5px; align-items: center;
         }
-        .btn:active { transform: scale(0.95); }
+        .nav-btn:hover { background: var(--pump-green); color: black; border-color: var(--pump-green); }
+
+        /* Screens */
+        #start-screen, #game-over-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(16, 20, 31, 0.98);
+            padding: 40px; border: 4px solid var(--pump-green); border-radius: 16px;
+            pointer-events: auto; z-index: 50;
+            box-shadow: 0 0 40px rgba(134, 239, 172, 0.2);
+            width: 90%; max-width: 400px;
+        }
+
+        .btn {
+            background: var(--pump-green); color: black; border: none;
+            padding: 15px 30px; font-family: 'Press Start 2P'; font-size: 12px;
+            cursor: pointer; margin-top: 20px; border-radius: 8px; width: 100%;
+            box-shadow: 0 4px 0 #15803d; transition: transform 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: none; }
         
         .btn-exit {
-            background: transparent; color: #666; border: 2px solid #333;
-            margin-top: 15px; font-size: 12px; padding: 15px 30px;
+            background: transparent; color: #666; border: 2px solid #333; box-shadow: none;
+            margin-top: 10px; font-size: 10px; padding: 12px;
         }
         .btn-exit:hover { color: white; border-color: white; }
 
+        .hidden { display: none !important; }
+
+        /* CRT Scanlines */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none; z-index: 60; opacity: 0.4;
+        }
+
         /* Touch Controls */
-        .touch-zone { position: absolute; bottom: 0; height: 50%; width: 33%; z-index: 20; opacity: 0; }
+        .touch-zone { position: absolute; bottom: 0; height: 40%; width: 33%; z-index: 30; }
         #left-zone { left: 0; } #right-zone { right: 0; } #fire-zone { left: 33%; width: 34%; }
     </style>
 </head>
 <body>
-    <div class="ui">SCORE: <span id="score">0</span></div>
-    
+
+    <div class="scanlines"></div>
+
     <div id="game-container">
-        <canvas id="canvas"></canvas>
         
-        <div id="game-over">
-            <h1 class="text-red-500 text-3xl mb-4 text-center">MARKET CRASHED</h1>
-            <p class="text-xs text-gray-400 mb-8 text-center max-w-xs leading-6">
-                The Jeets dumped on you.<br>Portfolio: -99%
+        <div id="ui-layer">
+            <div class="flex justify-between w-full items-start">
+                <a href="index.html" class="nav-btn"><i data-lucide="arrow-left" width="12"></i> LOBBY</a>
+                <div class="text-[var(--pump-green)] text-xs text-right">
+                    SCORE: <span id="scoreVal">0</span><br>
+                    WAVE: <span id="waveVal" class="text-white">1</span>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="start-screen">
+            <div class="text-4xl mb-4">🚀</div>
+            <h1 class="text-xl mb-4 text-[var(--pump-green)]">JEET SHOOTER</h1>
+            <p class="text-[10px] text-gray-400 mb-6 leading-6">
+                Jeets are dumping.<br>
+                Shoot Green Candles.<br>
+                Protect the Chart.<br><br>
+                [ARROWS] Move • [SPACE] Shoot
             </p>
-            
-            <button class="btn" onclick="location.reload()">BUY THE DIP (REPLAY)</button>
-            
+            <button class="btn" onclick="startGame()">DEFEND THE PUMP</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1 class="text-2xl mb-2 text-red-500">MARKET CRASHED</h1>
+            <p id="death-msg" class="text-[10px] text-gray-300 mb-6 italic">"You let the Jeets win."</p>
+            <div class="text-xs mb-4">FINAL SCORE: <span id="finalScore" class="text-white">0</span></div>
+            <button class="btn" onclick="resetGame()">BUY THE DIP</button>
             <button class="btn btn-exit" onclick="window.location.href='index.html'">EXIT TO LOBBY</button>
         </div>
 
         <div id="left-zone" class="touch-zone"></div>
         <div id="fire-zone" class="touch-zone"></div>
         <div id="right-zone" class="touch-zone"></div>
+
     </div>
 
     <script>
-        const canvas = document.getElementById('canvas');
+        lucide.createIcons();
+
+        // --- AUDIO ENGINE ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const actx = new AudioContext();
+
+        function beep(freq, type, duration, vol=0.1) {
+            if (actx.state === 'suspended') actx.resume();
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, actx.currentTime);
+            gain.gain.setValueAtTime(vol, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(actx.destination);
+            osc.start();
+            osc.stop(actx.currentTime + duration);
+        }
+
+        function playShoot() { beep(800, 'square', 0.1, 0.05); setTimeout(() => beep(600, 'square', 0.1, 0.05), 50); }
+        function playHit() { beep(200, 'sawtooth', 0.1, 0.1); }
+        function playCrash() { beep(100, 'sawtooth', 0.5, 0.2); }
+
+        // --- SETUP ---
+        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Resize logic to ensure full screen on mobile but capped width on desktop
         function resize() {
             canvas.width = window.innerWidth > 600 ? 600 : window.innerWidth;
             canvas.height = window.innerHeight;
@@ -88,17 +187,24 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Game State
-        let score = 0;
-        let gameOver = false;
-        let frame = 0;
+        // ASSETS
+        const playerImg = new Image();
+        playerImg.src = '12.png'; // YOUR TOASTER LOGO
 
-        // Entities
-        const player = { x: canvas.width/2 - 20, y: canvas.height - 100, w: 40, h: 40, speed: 7, dx: 0, icon: "🐂" };
+        // STATE
+        let isPlaying = false;
+        let score = 0;
+        let wave = 1;
+        let frame = 0;
+        let animationId;
+
+        // ENTITIES
+        const player = { x: canvas.width/2 - 25, y: canvas.height - 100, w: 50, h: 50, speed: 7, dx: 0 };
         let bullets = [];
         let enemies = [];
+        let particles = [];
 
-        // Controls
+        // CONTROLS
         window.addEventListener('keydown', e => {
             if(e.code === 'ArrowLeft') player.dx = -player.speed;
             if(e.code === 'ArrowRight') player.dx = player.speed;
@@ -108,88 +214,147 @@
             if(e.code === 'ArrowLeft' || e.code === 'ArrowRight') player.dx = 0;
         });
 
-        // Mobile
+        // Touch
         document.getElementById('left-zone').ontouchstart = (e) => { e.preventDefault(); player.dx = -player.speed; };
         document.getElementById('left-zone').ontouchend = (e) => { e.preventDefault(); player.dx = 0; };
-        
         document.getElementById('right-zone').ontouchstart = (e) => { e.preventDefault(); player.dx = player.speed; };
         document.getElementById('right-zone').ontouchend = (e) => { e.preventDefault(); player.dx = 0; };
-        
         document.getElementById('fire-zone').ontouchstart = (e) => { e.preventDefault(); shoot(); };
 
         function shoot() {
-            if(gameOver) return;
-            bullets.push({ x: player.x + 15, y: player.y, w: 10, h: 20, speed: 12 });
+            if(!isPlaying) return;
+            bullets.push({ x: player.x + player.w/2 - 5, y: player.y, w: 10, h: 25, speed: 15 });
+            playShoot();
         }
 
+        // LOGIC
         function spawnEnemy() {
-            const types = ["🧢", "🤡", "📉", "🐻"]; 
+            const types = ["🧢", "🤡", "📉", "🐻"]; // Jeet, Clown, Red Candle, Bear
             const x = Math.random() * (canvas.width - 40);
             enemies.push({ 
-                x: x, y: -40, w: 40, h: 40, 
-                speed: 3 + (score/500), 
-                type: types[Math.floor(Math.random()*types.length)] 
+                x: x, y: -50, w: 40, h: 40, 
+                speed: 2 + (wave * 0.5), 
+                type: types[Math.floor(Math.random()*types.length)],
+                wobble: Math.random() * Math.PI
             });
         }
 
         function update() {
-            if(gameOver) return;
+            if(!isPlaying) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Player
+            // Draw Starfield Background
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            for(let i=0; i<5; i++) {
+                ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+            }
+
+            // Player Logic
             player.x += player.dx;
             if(player.x < 0) player.x = 0;
-            if(player.x > canvas.width - 40) player.x = canvas.width - 40;
-            ctx.font = "40px Arial";
-            ctx.fillText(player.icon, player.x, player.y + 35);
+            if(player.x > canvas.width - player.w) player.x = canvas.width - player.w;
+
+            // Draw Player (Image or Fallback)
+            if(playerImg.complete && playerImg.naturalHeight !== 0) {
+                ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+            } else {
+                ctx.font = "40px Arial"; ctx.fillText("🍞", player.x, player.y + 40);
+            }
 
             // Bullets (Green Candles)
-            bullets.forEach((b, i) => {
+            ctx.fillStyle = '#22c55e';
+            ctx.strokeStyle = '#fff';
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
                 b.y -= b.speed;
-                ctx.fillStyle = "#22c55e";
+                
+                // Draw Candle
+                ctx.shadowBlur = 10; ctx.shadowColor = '#22c55e';
                 ctx.fillRect(b.x, b.y, b.w, b.h);
-                // Wick
-                ctx.fillStyle = "white";
-                ctx.fillRect(b.x + 4, b.y - 4, 2, 4);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(b.x + 4, b.y - 5, 2, 5); // Wick
+                ctx.fillStyle = '#22c55e'; // Reset
+                ctx.shadowBlur = 0;
+
                 if(b.y < 0) bullets.splice(i, 1);
-            });
+            }
 
             // Enemies
-            if(frame % 50 === 0) spawnEnemy();
-            
-            enemies.forEach((e, i) => {
+            if(frame % Math.max(20, 60 - (wave*5)) === 0) spawnEnemy();
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
                 e.y += e.speed;
+                e.x += Math.sin(frame * 0.05 + e.wobble) * 1; // Wiggle
+
                 ctx.font = "35px Arial";
                 ctx.fillText(e.type, e.x, e.y + 35);
 
-                // Collision Player (Game Over)
-                if(e.y + e.h > player.y + 10 && e.x < player.x + player.w && e.x + e.w > player.x) {
-                    endGame();
-                }
-                
-                // Collision Bullet (Kill Enemy)
-                bullets.forEach((b, bi) => {
+                // Collision: Bullet vs Enemy
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
                     if(b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+                        // Boom
+                        for(let k=0; k<5; k++) particles.push({x: e.x+20, y: e.y+20, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1, color: '#ef4444'});
+                        
                         enemies.splice(i, 1);
-                        bullets.splice(bi, 1);
+                        bullets.splice(j, 1);
                         score += 100;
-                        document.getElementById('score').innerText = score;
+                        playHit();
+                        break;
                     }
-                });
+                }
 
-                if(e.y > canvas.height) endGame(); // Missed one = Market Crash
-            });
+                // Collision: Enemy vs Player or Floor
+                if(e.y + e.h > player.y + 10 && e.x < player.x + player.w && e.x + e.w > player.x) {
+                    gameOver();
+                }
+                if(e.y > canvas.height) {
+                     gameOver(); // Touching floor kills you
+                }
+            }
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1.0;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Difficulty
+            if(score > wave * 1000) wave++;
+
+            // UI Update
+            document.getElementById('scoreVal').innerText = score;
+            document.getElementById('waveVal').innerText = wave;
 
             frame++;
-            requestAnimationFrame(update);
+            animationId = requestAnimationFrame(update);
         }
 
-        function endGame() {
-            gameOver = true;
-            document.getElementById('game-over').style.display = 'flex'; // Using flex to center content
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            score = 0; wave = 1; enemies = []; bullets = []; particles = [];
+            isPlaying = true;
+            update();
         }
 
-        update();
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            playCrash();
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('game-over-screen').classList.remove('hidden');
+            document.getElementById('game-over-screen').style.display = 'flex';
+        }
+
+        function resetGame() { startGame(); }
+
     </script>
 </body>
 </html>
