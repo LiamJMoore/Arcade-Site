@@ -31,7 +31,6 @@
             background-size: 100% 4px; pointer-events: none; z-index: 50; opacity: 0.4;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #111; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
@@ -93,10 +92,9 @@
     <script>
         lucide.createIcons();
         const { Connection, PublicKey, Transaction } = solanaWeb3;
-        // Use the global splToken variable provided by the script
-        const { createBurnInstruction, createCloseAccountInstruction, TOKEN_PROGRAM_ID } = splToken;
+        const { createCloseAccountInstruction, TOKEN_PROGRAM_ID } = splToken;
 
-        const RPC_ENDPOINT = "https://mainnet.helius-rpc.com/?api-key=f7d6a830-5ce4-436e-bd8d-73f75b0f0c52"; // Or use your own
+        const RPC_ENDPOINT = "https://mainnet.helius-rpc.com/?api-key=f7d6a830-5ce4-436e-bd8d-73f75b0f0c52"; 
         const connection = new Connection(RPC_ENDPOINT, 'confirmed');
         let userWallet = null;
         let tokenAccounts = [];
@@ -104,10 +102,14 @@
 
         async function connectAndScan() {
             const status = document.getElementById('status-msg');
-            if (window.solana && window.solana.isPhantom) {
+            
+            // FIX: Check for ANY solana provider, not just Phantom
+            const provider = window.solana || window.jupiter; 
+
+            if (provider) {
                 try {
                     status.innerText = "Connecting...";
-                    const resp = await window.solana.connect();
+                    const resp = await provider.connect();
                     userWallet = resp.publicKey;
                     status.innerText = "Scanning Blockchain...";
                     
@@ -121,7 +123,10 @@
                     status.innerText = "Connection Failed: " + err.message;
                 }
             } else {
-                window.open("https://phantom.app/", "_blank");
+                // Fallback if no wallet found
+                alert("No Solana wallet found. Please install Phantom, Solflare, or open this in the Jupiter App.");
+                // Only redirect if truly nothing is found, or just let them stay
+                // window.open("https://phantom.app/", "_blank"); 
             }
         }
 
@@ -135,7 +140,7 @@
                     decimals: info.tokenAmount.decimals,
                     isNative: info.isNative
                 };
-            }).filter(a => !a.isNative); // Filter out wrapped SOL sometimes
+            }).filter(a => !a.isNative);
 
             renderInterface();
         }
@@ -196,9 +201,7 @@
 
         function updateStats() {
             const count = selectedAccounts.size;
-            // Approx rent reclaim per account is ~0.002039 SOL
             const reclaim = (count * 0.002039).toFixed(4);
-            
             document.getElementById('reclaim-val').innerText = reclaim;
             const btn = document.getElementById('burn-btn');
             btn.disabled = count === 0;
@@ -217,52 +220,28 @@
                 selectedAccounts.forEach(idx => {
                     const token = tokenAccounts[idx];
                     const tokenPubkey = token.pubkey;
-                    const mintPubkey = new PublicKey(token.mint);
                     
-                    // 1. If balance > 0, Burn it first
-                    if (token.amount > 0) {
-                        // Calculate raw amount (uiAmount * 10^decimals)
-                        // Safe integer math for JS is tricky with big decimals, but for "burn all" usually straightforward
-                        // Using splToken.createBurnInstruction logic
-                        // Note: Ideally we use BigInt, but for this simple tool we assume user wants to nuke it.
-                        // We need the raw amount.
-                        // Since we don't have the raw amount stored, let's try to close. 
-                        // Actually, SPL Token Close fails if balance > 0.
-                        // We must add a Burn Instruction.
-                        
-                        // We need the raw u64 amount. Since we parsed it to UI amount, we might have lost precision.
-                        // For a PRO tool, we'd fetch raw amounts.
-                        // Hack for now: Most "junk" allows burning.
-                        // Let's verify with the user they want to proceed.
-                    }
-
-                    // 2. Close Account Instruction
-                    // This sends the rent (lamports) to the userWallet
+                    // Close Account Instruction
                     const closeIx = createCloseAccountInstruction(
-                        tokenPubkey, // Account to close
-                        userWallet,  // Destination for rent
-                        userWallet   // Owner authority
+                        tokenPubkey, 
+                        userWallet, 
+                        userWallet 
                     );
                     transaction.add(closeIx);
                 });
 
-                const { signature } = await window.solana.signAndSendTransaction(transaction);
+                const provider = window.solana || window.jupiter;
+                const { signature } = await provider.signAndSendTransaction(transaction);
                 await connection.confirmTransaction(signature);
                 
                 alert(`Success! Reclaimed SOL. TX: ${signature.slice(0,8)}...`);
-                window.location.reload(); // Refresh to clear burnt items
+                window.location.reload(); 
 
             } catch (e) {
                 console.error(e);
-                alert("Transaction Failed. Note: You can only close EMPTY accounts with this version. Transfer/Burn tokens first if they have balance.");
+                alert("Transaction Failed. Note: You can only close EMPTY accounts with this version.");
             }
         }
-        
-        // Note regarding the "Burn" logic above:
-        // Writing a robust Burn instruction requires handling BigInts for token decimals perfectly.
-        // To avoid errors, this version focuses on CLOSING accounts (which works 100% for 0 balance accounts).
-        // If a user has a balance, the transaction will fail safely on-chain.
-        // Users usually have tons of "0 balance" accounts from selling tokens but keeping the account open.
     </script>
 </body>
 </html>
