@@ -3,19 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Find Alon | RoastMe.fun</title>
+    <title>Find Alon | DEGENGAMES.FUN</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="12.png" type="image/png">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
-        body { 
-            background: #050201; 
-            color: white; 
-            font-family: 'Press Start 2P', cursive; 
-            text-align: center; 
-            overflow: hidden; 
+        :root {
+            --pump-bg: #020502;
+            --pump-green: #22c55e;
+            --pump-bright: #86efac;
+            --pump-red: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--pump-bg);
+            color: var(--pump-green);
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
             touch-action: none;
-            user-select: none;
+            cursor: crosshair;
         }
 
         #game-container {
@@ -25,246 +36,359 @@
             overflow: hidden;
         }
 
-        /* The Grid of Characters */
-        #grid {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-            padding: 20px;
-            overflow: hidden;
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
         }
 
-        .char {
-            font-size: 40px;
-            cursor: pointer;
-            transition: transform 0.1s;
-            padding: 10px;
-            filter: grayscale(0.5);
+        /* UI Layer */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 20; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
-        .char:hover { transform: scale(1.2); filter: grayscale(0); }
-        
-        /* Alon Character */
-        .alon {
-            filter: drop-shadow(0 0 5px #f97316);
-            animation: pulse 1s infinite alternate;
-        }
-        
-        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
-        /* UI */
-        .hud {
-            position: absolute; top: 20px; left: 0; width: 100%;
-            display: flex; justify-content: space-between; padding: 0 30px;
-            pointer-events: none; z-index: 20;
+        .hud-panel {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            text-shadow: 0 0 10px var(--pump-green);
         }
-        .hud-text { color: #f97316; text-shadow: 2px 2px 0 #000; font-size: 14px; }
+
+        .nav-btn {
+            pointer-events: auto;
+            background: rgba(34, 197, 94, 0.1);
+            padding: 10px; border-radius: 8px;
+            color: var(--pump-bright); 
+            border: 1px solid var(--pump-green);
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { background: var(--pump-green); color: black; box-shadow: 0 0 15px var(--pump-green); }
 
         /* Screens */
-        #start-screen, #game-over, #level-up {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 50;
+        #start-screen, #game-over-screen, #level-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(2, 5, 2, 0.95);
+            padding: 40px; border: 2px solid var(--pump-green); border-radius: 4px;
+            pointer-events: auto; z-index: 50;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+            width: 90%; max-width: 500px;
         }
-        .hidden { display: none !important; }
 
-        .btn { 
-            background: #f97316; color: black; border: none; 
-            padding: 15px 30px; font-family: inherit; font-size: 14px;
-            margin-top: 20px; cursor: pointer; border-radius: 8px;
-            box-shadow: 0 4px 0 #c2410c; transition: transform 0.1s;
+        .btn {
+            background: var(--pump-green); color: black; border: none;
+            padding: 15px 30px; font-family: 'Press Start 2P'; font-size: 12px;
+            cursor: pointer; margin-top: 20px; width: 100%;
+            box-shadow: 4px 4px 0 #000; transition: transform 0.1s;
         }
-        .btn:active { transform: translateY(4px); box-shadow: none; }
+        .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
         
         .btn-exit {
-            background: transparent; color: #666; border: 2px solid #333; box-shadow: none;
+            background: transparent; color: #4ade80; 
+            border: 1px solid var(--pump-green); box-shadow: none;
             margin-top: 10px; font-size: 10px; padding: 12px;
         }
-        .btn-exit:hover { color: white; border-color: white; }
+        .btn-exit:hover { background: rgba(34, 197, 94, 0.1); }
 
-        /* Floating Text */
-        .float-text {
-            position: absolute; pointer-events: none; font-size: 20px; color: #22c55e;
-            animation: floatUp 0.8s forwards; z-index: 30;
+        .hidden { display: none !important; }
+
+        /* Night Vision Effect */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(0, 255, 0, 0.03), rgba(0, 255, 0, 0.06), rgba(0, 255, 0, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none; z-index: 60; opacity: 0.8;
         }
-        @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
+        .vignette {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 40%, black 140%);
+            pointer-events: none; z-index: 55;
+        }
 
-        /* Distractions */
-        .distraction { animation: shake 2s infinite; }
-        @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
-
+        /* Glitch Animation */
+        .glitch-anim { animation: glitch 0.2s linear infinite; }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
     </style>
 </head>
 <body>
 
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
     <div id="game-container">
-        <div class="hud">
-            <div class="hud-text">LEVEL: <span id="levelVal">1</span></div>
-            <div class="hud-text">TIME: <span id="timeVal" class="text-white">10</span>s</div>
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-layer">
+            <div class="hud-panel w-full">
+                <a href="index.html" class="nav-btn"><i data-lucide="arrow-left" width="16"></i></a>
+                <div class="text-right">
+                    <div class="text-[var(--pump-bright)] text-lg">LEVEL <span id="levelVal">1</span></div>
+                    <div class="text-xs text-green-600">TIME: <span id="timeVal" class="text-white">10.0</span>s</div>
+                </div>
+            </div>
         </div>
 
-        <div id="grid"></div>
-
         <div id="start-screen">
-            <h1 class="text-3xl text-[#f97316] mb-4">FIND ALON</h1>
-            <p class="text-[10px] text-gray-400 mb-6 max-w-md leading-6">
-                Alon is hiding from the FUD.<br>
-                Spot him before he rugs.<br>
-                (He's the guy in the yellow hat 🧢)
+            <div class="text-6xl mb-6 animate-pulse">🧢</div>
+            <h1 class="text-xl mb-4 text-[var(--pump-bright)]">FIND ALON</h1>
+            <p class="text-[10px] text-green-400 mb-6 leading-6">
+                The Dev is dumping.<br>
+                Find the Blue Hat 🧢<br>
+                Ignore the FUD 📉<br>
+                Click him before he rugs.
             </p>
-            <div class="text-6xl mb-6 animate-bounce">🧢</div> 
             <button class="btn" onclick="startGame()">START SEARCH</button>
         </div>
 
-        <div id="level-up" class="hidden">
-            <h1 class="text-2xl text-[#22c55e] mb-2">FOUND HIM!</h1>
-            <p class="text-xs text-gray-300">Next level is harder...</p>
-        </div>
-
-        <div id="game-over" class="hidden">
-            <h1 class="text-3xl text-red-500 mb-4">HE ESCAPED!</h1>
-            <p class="text-[10px] text-gray-400 mb-6">"Dev sold. Project dead."</p>
-            <div class="text-sm mb-4">LEVEL REACHED: <span id="finalLevel">1</span></div>
-            <button class="btn" onclick="resetGame()">TRY AGAIN</button>
+        <div id="game-over-screen" class="hidden">
+            <h1 class="text-2xl mb-2 text-[var(--pump-red)]">DEV SOLD</h1>
+            <p class="text-[10px] text-green-500 mb-6">"Liquidity has been removed."</p>
+            <div class="text-xs mb-4 text-white">YOU REACHED LEVEL: <span id="finalLevel">1</span></div>
+            <button class="btn" onclick="startGame()">TRY AGAIN</button>
             <button class="btn btn-exit" onclick="window.location.href='index.html'">EXIT TO LOBBY</button>
         </div>
+
     </div>
 
     <script>
-        const grid = document.getElementById('grid');
-        const timeEl = document.getElementById('timeVal');
-        const levelEl = document.getElementById('levelVal');
-        
+        lucide.createIcons();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // RESIZE
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // GAME STATE
+        let isPlaying = false;
         let level = 1;
         let timeLeft = 10;
-        let timerInterval;
-        let isPlaying = false;
+        let entities = [];
+        let particles = [];
+        let clouds = [];
+        let animationId;
+        let alonFound = false;
 
-        // Character Pool (Decoys)
-        const decoys = ['🐻', '🤡', '📉', '💸', '🧱', '👮', '🧟', '🧛', '🤖', '👺'];
-        // "Alon" character (Visual representation)
-        // In a real asset scenario, this would be an <img> tag. For now, using closest Emoji combo or image.
-        // If you upload an image for Alon, change this logic to use an <img> tag.
-        // Using the Hat emoji as "Alon" based on the prompt's implication of the yellow hat image.
-        const ALON_CHAR = '🧢'; 
-
-        function generateLevel() {
-            grid.innerHTML = '';
-            
-            // Difficulty Scaling
-            const cols = Math.min(3 + level, 8); // Max 8 cols
-            const rows = Math.min(3 + Math.floor(level/2), 6); // Max 6 rows
-            const totalCells = cols * rows;
-            
-            // Place Alon at random index
-            const alonIndex = Math.floor(Math.random() * totalCells);
-
-            for(let i=0; i<totalCells; i++) {
-                const cell = document.createElement('div');
-                cell.classList.add('char');
+        // ASSETS
+        const ALON_EMOJI = "🧢";
+        const DECOYS = ["📉", "🐻", "🤡", "💸", "💀", "🧱", "👮"];
+        
+        // ENTITY CLASS
+        class Entity {
+            constructor(isAlon) {
+                this.isAlon = isAlon;
+                this.size = 40 - (level * 2); // Get smaller as levels go up
+                if(this.size < 20) this.size = 20;
                 
-                // Randomize font size slightly for chaos
-                const size = 30 + Math.random() * 20;
-                cell.style.fontSize = size + 'px';
+                this.x = Math.random() * (canvas.width - this.size);
+                this.y = Math.random() * (canvas.height - this.size);
+                
+                // Random Velocity
+                const speed = 1 + (level * 0.5);
+                this.vx = (Math.random() - 0.5) * speed;
+                this.vy = (Math.random() - 0.5) * speed;
+                
+                this.emoji = isAlon ? ALON_EMOJI : DECOYS[Math.floor(Math.random() * DECOYS.length)];
+                this.rotation = 0;
+                this.spin = (Math.random() - 0.5) * 0.1;
+            }
 
-                if(i === alonIndex) {
-                    // It's Alon
-                    cell.innerText = ALON_CHAR;
-                    cell.classList.add('alon');
-                    cell.onclick = foundAlon;
-                    
-                    // Use Image if available (Uncomment below if you have 'alon.png')
-                    // cell.innerHTML = '<img src="image_a29f06.png" style="width:50px; height:50px; border-radius:50%;">'; 
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.spin;
+
+                // Bounce off walls
+                if(this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if(this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                
+                // Alon glows slightly
+                if(this.isAlon) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#22c55e';
                 } else {
-                    // Decoy
-                    cell.innerText = decoys[Math.floor(Math.random() * decoys.length)];
-                    if(Math.random() > 0.8) cell.classList.add('distraction'); // Wiggle some decoys
-                    cell.onclick = wrongClick;
+                    ctx.shadowBlur = 0;
+                    // Dim decoys slightly
+                    ctx.globalAlpha = 0.7;
                 }
-                
-                grid.appendChild(cell);
+
+                ctx.fillText(this.emoji, 0, 0);
+                ctx.restore();
+                ctx.globalAlpha = 1.0;
+            }
+
+            checkClick(mx, my) {
+                const dist = Math.sqrt((mx - this.x)**2 + (my - this.y)**2);
+                return dist < (this.size / 1.5);
             }
         }
 
-        function startTimer() {
-            clearInterval(timerInterval);
-            // Time gets shorter as level goes up, min 3 seconds
-            timeLeft = Math.max(10 - (level * 0.5), 3); 
-            timeEl.innerText = timeLeft.toFixed(1);
+        class Cloud {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = 100 + Math.random() * 200;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if(this.x > canvas.width + 200) this.x = -200;
+                if(this.x < -200) this.x = canvas.width + 200;
+            }
+            draw() {
+                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                grad.addColorStop(0, 'rgba(20, 83, 45, 0.6)'); // Dark Green Fog
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        // INPUT
+        window.addEventListener('pointerdown', (e) => {
+            if(!isPlaying) return;
             
-            timerInterval = setInterval(() => {
-                timeLeft -= 0.1;
-                timeEl.innerText = Math.abs(timeLeft).toFixed(1);
-                
-                if(timeLeft <= 0) {
-                    gameOver();
+            // Visual Click
+            createParticles(e.clientX, e.clientY, '#fff');
+
+            let hit = false;
+            for(let ent of entities) {
+                if(ent.checkClick(e.clientX, e.clientY)) {
+                    if(ent.isAlon) {
+                        levelUp();
+                        hit = true;
+                    } else {
+                        // Penalty
+                        timeLeft -= 2;
+                        createParticles(e.clientX, e.clientY, '#ef4444'); // Red particles
+                        screenShake();
+                    }
+                    break;
                 }
-            }, 100);
+            }
+        });
+
+        function createParticles(x, y, color) {
+            for(let i=0; i<8; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
         }
 
-        function foundAlon(e) {
-            if(!isPlaying) return;
-            clearInterval(timerInterval);
-            
-            // Visual Feedback
-            const floatText = document.createElement('div');
-            floatText.innerText = "+1 LEVEL";
-            floatText.className = "float-text";
-            floatText.style.left = e.clientX + 'px';
-            floatText.style.top = e.clientY + 'px';
-            document.body.appendChild(floatText);
-            
-            // Level Up Screen (Brief flash)
-            const lvlScreen = document.getElementById('level-up');
-            lvlScreen.classList.remove('hidden');
-            
-            setTimeout(() => {
-                lvlScreen.classList.add('hidden');
-                level++;
-                levelEl.innerText = level;
-                generateLevel();
-                startTimer();
-            }, 800);
+        function screenShake() {
+            document.body.classList.add('glitch-anim');
+            setTimeout(() => document.body.classList.remove('glitch-anim'), 200);
         }
 
-        function wrongClick(e) {
-            if(!isPlaying) return;
-            // Penalty
-            timeLeft -= 1;
-            const floatText = document.createElement('div');
-            floatText.innerText = "-1s";
-            floatText.className = "float-text";
-            floatText.style.color = "red";
-            floatText.style.left = e.clientX + 'px';
-            floatText.style.top = e.clientY + 'px';
-            document.body.appendChild(floatText);
+        function levelUp() {
+            level++;
+            score = level; // Score tracks level
+            timeLeft += 5; // Bonus time
             
-            // Shake screen
-            document.body.style.transform = "translate(5px, 0)";
-            setTimeout(() => document.body.style.transform = "none", 50);
+            // Make new level
+            initLevel();
+        }
+
+        function initLevel() {
+            entities = [];
+            // Add Alon
+            entities.push(new Entity(true));
+            
+            // Add Decoys (More every level)
+            const decoyCount = 5 + (level * 3);
+            for(let i=0; i<decoyCount; i++) {
+                entities.push(new Entity(false));
+            }
+
+            // Add Fog (Level 3+)
+            if(level >= 3 && clouds.length < 5) {
+                clouds.push(new Cloud());
+            }
+        }
+
+        function update() {
+            if(!isPlaying) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Fog (Background)
+            clouds.forEach(c => { c.update(); c.draw(); });
+
+            // Update Entities
+            entities.forEach(e => { e.update(); e.draw(); });
+
+            // Particles
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 3, 3);
+                ctx.globalAlpha = 1.0;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Logic
+            timeLeft -= 1/60; // Assuming 60fps
+            if(timeLeft <= 0) {
+                timeLeft = 0;
+                gameOver();
+            }
+
+            // UI
+            document.getElementById('timeVal').innerText = timeLeft.toFixed(1);
+            document.getElementById('levelVal').innerText = level;
+
+            animationId = requestAnimationFrame(update);
         }
 
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('game-over').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
             level = 1;
-            levelEl.innerText = level;
+            timeLeft = 10;
+            clouds = [];
+            initLevel();
             isPlaying = true;
-            generateLevel();
-            startTimer();
-        }
-
-        function resetGame() {
-            startGame();
+            update();
         }
 
         function gameOver() {
             isPlaying = false;
-            clearInterval(timerInterval);
+            cancelAnimationFrame(animationId);
             document.getElementById('finalLevel').innerText = level;
-            document.getElementById('game-over').classList.remove('hidden');
+            document.getElementById('game-over-screen').classList.remove('hidden');
         }
 
     </script>
