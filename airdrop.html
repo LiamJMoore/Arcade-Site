@@ -3,21 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Airdrop Hunter | RoastMe.fun</title>
+    <title>Airdrop Hunter | Pump Fun Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="12.png" type="image/png">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
         :root {
-            --roast-bg: #050201;
-            --roast-orange: #f97316;
-            --roast-green: #22c55e;
-            --roast-red: #ef4444;
+            --pump-bg: #10141f;
+            --pump-green: #86efac;
+            --pump-red: #ef4444;
+            --pump-yellow: #facc15;
         }
 
         body {
-            background-color: var(--roast-bg);
+            margin: 0;
+            padding: 0;
+            background-color: var(--pump-bg);
             color: white;
             font-family: 'Press Start 2P', cursive;
             overflow: hidden;
@@ -28,291 +32,435 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            background: radial-gradient(circle at 50% 10%, #1a1a2e 0%, #000 100%);
-            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, #020408 0%, #131b2e 100%);
         }
 
-        /* Player */
-        #player {
+        canvas {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 60px;
-            transition: left 0.05s linear;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
-            z-index: 10;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
         }
 
-        /* Falling Items */
-        .item {
-            position: absolute;
-            font-size: 40px;
-            z-index: 5;
-        }
-        
-        .dodging {
-            transition: transform 0.2s ease-out;
-        }
-
-        /* UI */
+        /* UI LAYER */
         #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; padding: 20px;
-            display: flex; justify-content: space-between; pointer-events: none; z-index: 20;
-        }
-        
-        .stat-box { text-shadow: 2px 2px 0 #000; }
-
-        #patience-bar-container {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 300px; height: 20px; background: #333; border: 2px solid #fff; border-radius: 10px;
-            overflow: hidden; z-index: 20;
-        }
-        #patience-bar {
-            width: 100%; height: 100%; background: var(--roast-green);
-            transition: width 0.2s linear, background-color 0.5s;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            z-index: 20;
         }
 
-        /* Screens */
-        #start-screen, #game-over {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); border: 4px solid var(--roast-orange);
-            padding: 40px; text-align: center; border-radius: 20px; z-index: 50;
-            width: 90%; max-width: 500px;
+        .hud-text {
+            color: var(--pump-green);
+            text-shadow: 2px 2px 0px #000;
+            font-size: 14px;
         }
-        
+
+        /* PATIENCE BAR */
+        .bar-container {
+            width: 100%; max-width: 300px;
+            height: 24px;
+            background: #000;
+            border: 2px solid white;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 0 auto;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            background: var(--pump-green);
+            width: 100%;
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+        .bar-label {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px; color: black;
+            z-index: 2; mix-blend-mode: overlay;
+        }
+
+        /* SCREENS */
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(16, 20, 31, 0.95);
+            padding: 40px;
+            border: 4px solid var(--pump-green);
+            border-radius: 16px;
+            pointer-events: auto;
+            z-index: 50;
+            box-shadow: 0 0 40px rgba(134, 239, 172, 0.2);
+            width: 90%; max-width: 450px;
+        }
+
         .btn {
-            background: var(--roast-orange); color: black; border: none;
-            padding: 15px 30px; font-family: inherit; font-size: 14px;
-            margin-top: 20px; cursor: pointer; border-radius: 8px; width: 100%;
-            box-shadow: 0 4px 0 #c2410c; transition: transform 0.1s;
+            background: var(--pump-green);
+            color: black; border: none;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P'; font-size: 14px;
+            cursor: pointer; margin-top: 20px;
+            border-radius: 8px; width: 100%;
+            box-shadow: 0 4px 0 #059669;
+            transition: transform 0.1s;
         }
         .btn:active { transform: translateY(4px); box-shadow: none; }
+        
+        .btn-exit {
+            background: transparent; color: #666;
+            border: 2px solid #333; box-shadow: none;
+            margin-top: 10px; font-size: 10px; padding: 12px;
+        }
+        .btn-exit:hover { color: white; border-color: white; }
 
         .hidden { display: none !important; }
-        
-        /* Floating Text Effects */
-        .float-text {
-            position: absolute; color: var(--roast-red); font-size: 12px;
-            animation: floatUp 1s forwards; pointer-events: none; z-index: 15;
-            white-space: nowrap;
-        }
-        @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
 
+        /* BACK BUTTON */
+        .nav-btn {
+            pointer-events: auto;
+            background: rgba(255,255,255,0.1);
+            padding: 10px; border-radius: 8px;
+            color: white; border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.2); border-color: white; }
+
+        /* Floating Text Animation */
+        .float-msg {
+            position: absolute;
+            font-size: 12px; font-weight: bold;
+            animation: floatUp 1s forwards;
+            pointer-events: none;
+            text-shadow: 1px 1px 0 #000;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.2); }
+        }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
         <div id="ui-layer">
-            <div class="stat-box text-[10px] text-gray-400">
-                WAITED: <span id="score" class="text-white text-lg">0</span> DAYS
+            <div class="flex justify-between items-start w-full">
+                <div class="hud-text">
+                    WAITED: <span id="scoreVal" class="text-white text-xl">0</span> DAYS
+                </div>
+                <a href="index.html" class="nav-btn">
+                    <i data-lucide="x" width="20"></i>
+                </a>
             </div>
-            <a href="index.html" class="pointer-events-auto bg-white/10 p-2 rounded hover:bg-white/20 transition">
-                <i data-lucide="x" width="20"></i>
-            </a>
+
+            <!-- Patience Bar (Bottom Center) -->
+            <div class="w-full flex justify-center mb-10">
+                <div class="bar-container">
+                    <div class="bar-label">PATIENCE</div>
+                    <div id="patienceBar" class="bar-fill"></div>
+                </div>
+            </div>
         </div>
 
-        <div id="patience-bar-container">
-            <div id="patience-bar"></div>
-        </div>
-        <div class="absolute bottom-12 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 font-bold tracking-widest z-20">PATIENCE</div>
-
-        <div id="player">🤲</div>
-
+        <!-- START SCREEN -->
         <div id="start-screen">
-            <h1 class="text-2xl mb-4 text-[var(--roast-orange)]">WHERE AIRDROP?</h1>
-            <p class="text-[10px] text-gray-300 mb-6 leading-6">
+            <div class="text-4xl mb-4">📦</div>
+            <h1 class="text-2xl mb-4 text-[var(--pump-green)]">AIRDROP HUNTER</h1>
+            <p class="text-[10px] text-gray-400 mb-6 leading-6">
                 The devs promised.<br>
                 Catch the 📦 to get rich.<br>
-                Eat 💊 HOPIUM to stay alive.<br>
+                Eat 💊 to stay alive.<br>
                 Don't lose patience.
             </p>
             <button class="btn" onclick="startGame()">START WAITING</button>
         </div>
 
-        <div id="game-over" class="hidden">
-            <h1 class="text-2xl mb-4 text-red-500">YOU SOLD.</h1>
-            <p id="death-msg" class="text-[10px] text-gray-300 mb-6 leading-relaxed">
-                "Airdrop confirmed for 2026."
+        <!-- GAME OVER -->
+        <div id="game-over-screen" class="hidden">
+            <h1 class="text-3xl mb-2 text-red-500">YOU SOLD.</h1>
+            <p id="death-msg" class="text-[10px] text-gray-300 mb-6 leading-6 italic">
+                "Snapshot was taken yesterday."
             </p>
-            <div class="text-xs mb-4">YOU WAITED: <span id="final-score" class="text-[var(--roast-orange)]">0</span> DAYS</div>
+            <div class="text-xs mb-4 text-gray-400">YOU WAITED: <span id="finalScore" class="text-white">0</span> DAYS</div>
             <button class="btn" onclick="startGame()">WAIT HARDER</button>
-            <button class="btn" style="background:#333; color:white; margin-top:10px; box-shadow:none;" onclick="location.href='index.html'">GIVE UP</button>
+            <button class="btn btn-exit" onclick="window.location.href='index.html'">GIVE UP</button>
         </div>
+
     </div>
 
     <script>
         lucide.createIcons();
 
-        const player = document.getElementById('player');
-        const container = document.getElementById('game-container');
-        const scoreEl = document.getElementById('score');
-        const patienceBar = document.getElementById('patience-bar');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         
+        // Responsive Canvas
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Game State
+        let isPlaying = false;
         let score = 0;
         let patience = 100;
-        let gameLoop;
-        let spawnLoop;
-        let isPlaying = false;
-        let playerX = 50; // percentage
-        let items = [];
-        
-        // Settings
-        const GAME_SPEED = 5; // Fall speed
-        const SPAWN_RATE = 800; // ms
-        const DECAY_RATE = 0.15; // Patience loss per tick
+        let frame = 0;
+        let animationId;
 
-        // Controls
-        function movePlayer(x) {
-            playerX = x;
-            if(playerX < 5) playerX = 5;
-            if(playerX > 95) playerX = 95;
-            player.style.left = playerX + '%';
+        // Configuration
+        const GAME_SPEED = 3; // Base falling speed
+        const DECAY_RATE = 0.1; // Patience loss per frame
+
+        // ENTITIES
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            w: 60,
+            h: 60,
+            targetX: canvas.width / 2,
+            lerp: 0.15, // Smoothness
+            emoji: "🤲"
+        };
+
+        let items = [];
+        let particles = [];
+
+        // INPUT HANDLING
+        function handleInput(x) {
+            if(!isPlaying) return;
+            player.targetX = x;
         }
 
-        container.addEventListener('mousemove', (e) => {
-            if(!isPlaying) return;
-            movePlayer((e.clientX / window.innerWidth) * 100);
-        });
+        window.addEventListener('mousemove', e => handleInput(e.clientX));
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            handleInput(e.touches[0].clientX);
+        }, {passive: false});
 
-        container.addEventListener('touchmove', (e) => {
-            if(!isPlaying) return;
-            movePlayer((e.touches[0].clientX / window.innerWidth) * 100);
-        });
-
-        function spawnItem() {
-            const el = document.createElement('div');
-            el.classList.add('item');
-            
-            // Randomize Item Type
-            const rand = Math.random();
-            let type = 'pill';
-            
-            if(rand > 0.95) { // 5% Chance for Airdrop (The Bait)
-                type = 'airdrop';
-                el.innerText = '📦';
-            } else if(rand > 0.7) { // 25% Chance for Rug
-                type = 'rug';
-                el.innerText = '📉';
-            } else { // 70% Chance for Hopium
-                type = 'pill';
-                el.innerText = '💊';
+        // CLASSES
+        class Item {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 50) + 25;
+                this.y = -50;
+                this.size = 40;
+                this.speed = GAME_SPEED + Math.random() * 2;
+                this.wobble = Math.random() * Math.PI * 2;
+                
+                // Probabilities: 5% Airdrop, 25% Rug, 70% Pill
+                const r = Math.random();
+                if (r > 0.95) {
+                    this.type = 'airdrop';
+                    this.emoji = '📦';
+                    this.speed *= 0.8; // Falls slower (tempting)
+                } else if (r > 0.70) {
+                    this.type = 'rug';
+                    this.emoji = '📉';
+                } else {
+                    this.type = 'pill';
+                    this.emoji = '💊';
+                }
             }
 
-            el.dataset.type = type;
-            el.style.left = Math.random() * 90 + 5 + '%';
-            el.style.top = '-50px';
-            container.appendChild(el);
-            items.push({ el, y: -50, type });
+            update() {
+                this.y += this.speed;
+                this.wobble += 0.05;
+                this.x += Math.sin(this.wobble) * 0.5; // Slight sway
+
+                // THE TROLL MECHANIC: Airdrops dodge the player
+                if (this.type === 'airdrop' && this.y > canvas.height - 300) {
+                    const dx = this.x - player.x;
+                    // If close horizontally
+                    if (Math.abs(dx) < 100) {
+                        // Move away from player
+                        this.x += dx > 0 ? 3 : -3;
+                        this.emoji = 'SOON'; // Visual troll
+                        this.size = 20; // Make text smaller
+                    }
+                }
+            }
+
+            draw() {
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                
+                // Glow for Airdrop
+                if(this.type === 'airdrop') {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#facc15';
+                } else if (this.type === 'pill') {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#86efac';
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fillText(this.emoji, this.x, this.y);
+                ctx.shadowBlur = 0; // Reset
+            }
         }
 
-        function showFloatText(x, y, text, color) {
-            const el = document.createElement('div');
-            el.classList.add('float-text');
-            el.innerText = text;
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
-            el.style.color = color;
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 1000);
+        class Particle {
+            constructor(x, y, color, text) {
+                this.x = x; this.y = y;
+                this.color = color;
+                this.text = text;
+                this.life = 1.0;
+                this.vy = -1; // Float up
+            }
+            update() {
+                this.y += this.vy;
+                this.life -= 0.02;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.font = "bold 14px monospace";
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.globalAlpha = 1.0;
+            }
         }
 
+        // GAME LOOP
         function update() {
-            if(!isPlaying) return;
-
-            // Patience Decay
-            patience -= DECAY_RATE;
-            patienceBar.style.width = patience + '%';
+            // Smooth Player Movement
+            player.x += (player.targetX - player.x) * player.lerp;
             
-            if(patience < 30) patienceBar.style.backgroundColor = '#ef4444';
-            else patienceBar.style.backgroundColor = '#22c55e';
+            // Boundary Check
+            if(player.x < 30) player.x = 30;
+            if(player.x > canvas.width - 30) player.x = canvas.width - 30;
 
-            if(patience <= 0) gameOver();
-
-            // Score (Time Waited)
-            score += 0.05;
-            scoreEl.innerText = Math.floor(score);
+            // Spawn Items
+            if (frame % 40 === 0) {
+                items.push(new Item());
+            }
 
             // Update Items
-            const playerRect = player.getBoundingClientRect();
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.update();
 
-            items.forEach((item, index) => {
-                item.y += GAME_SPEED;
-                
-                // TROLL MECHANIC: If it's an Airdrop, DODGE the player when close
-                if(item.type === 'airdrop' && item.y > window.innerHeight - 300) {
-                    const itemRect = item.el.getBoundingClientRect();
-                    const distX = (itemRect.left + itemRect.width/2) - (playerRect.left + playerRect.width/2);
-                    
-                    // If getting close horizontally
-                    if(Math.abs(distX) < 100) {
-                        // Move away rapidly
-                        const currentLeft = parseFloat(item.el.style.left);
-                        const dodgeDir = distX > 0 ? 5 : -5; // Move right if player is left, etc.
-                        item.el.style.left = (currentLeft + dodgeDir) + '%';
-                        item.el.innerText = "SOON"; // Change visuals
-                        item.el.style.fontSize = "12px";
-                        item.el.classList.add('dodging');
-                    }
-                }
+                // Collision Detection (Circle Distance)
+                let dy = item.y - player.y;
+                let dx = item.x - player.x;
+                let dist = Math.sqrt(dx*dx + dy*dy);
 
-                item.el.style.top = item.y + 'px';
-
-                // Collision Detection
-                const itemRect = item.el.getBoundingClientRect();
-                
-                if(
-                    itemRect.bottom >= playerRect.top + 20 &&
-                    itemRect.top <= playerRect.bottom &&
-                    itemRect.right >= playerRect.left + 20 &&
-                    itemRect.left <= playerRect.right - 20
-                ) {
-                    // Hit!
-                    if(item.type === 'pill') {
-                        patience = Math.min(patience + 15, 100); // Heal
-                        showFloatText(itemRect.left, itemRect.top, "+HOPIUM", "#22c55e");
+                if (dist < 50) {
+                    // HIT!
+                    if (item.type === 'pill') {
+                        patience = Math.min(patience + 15, 100);
+                        particles.push(new Particle(item.x, item.y, '#86efac', '+HOPIUM'));
                     } else if (item.type === 'rug') {
-                        patience -= 30; // Damage
-                        showFloatText(itemRect.left, itemRect.top, "FUD!", "#ef4444");
+                        patience -= 25;
+                        particles.push(new Particle(item.x, item.y, '#ef4444', 'FUD!'));
                     } else if (item.type === 'airdrop') {
-                        // Extremely rare case if they somehow catch it
-                        showFloatText(itemRect.left, itemRect.top, "DELAYED!", "#facc15");
+                        // Extremely rare (impossible mostly)
+                        particles.push(new Particle(item.x, item.y, '#facc15', 'DELAYED!'));
                     }
-
-                    item.el.remove();
-                    items.splice(index, 1);
+                    items.splice(i, 1);
+                } else if (item.y > canvas.height) {
+                    items.splice(i, 1);
                 }
-                
-                // Cleanup off-screen
-                if(item.y > window.innerHeight) {
-                    item.el.remove();
-                    items.splice(index, 1);
-                }
-            });
+            }
 
-            gameLoop = requestAnimationFrame(update);
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if(particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            // Logic
+            patience -= DECAY_RATE;
+            score += 0.03; // Time based score
+
+            // UI Updates
+            updateUI();
+
+            // Game Over Check
+            if (patience <= 0) gameOver();
+
+            frame++;
         }
 
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background Grid (Pump Fun Style)
+            ctx.strokeStyle = 'rgba(134, 239, 172, 0.05)'; // Faint Green
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            const offset = (frame * 0.5) % gridSize; // Moving grid effect
+            
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = offset; y < canvas.height; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // Draw Player
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ffffff';
+            ctx.font = "60px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(player.emoji, player.x, player.y);
+            ctx.shadowBlur = 0;
+
+            // Draw Items
+            items.forEach(item => item.draw());
+
+            // Draw Particles
+            particles.forEach(p => p.draw());
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+            update();
+            draw();
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function updateUI() {
+            const pBar = document.getElementById('patienceBar');
+            pBar.style.width = Math.max(0, patience) + '%';
+            
+            if(patience < 30) pBar.style.background = '#ef4444'; // Red
+            else pBar.style.background = '#86efac'; // Green
+
+            document.getElementById('scoreVal').innerText = Math.floor(score);
+        }
+
+        // GAME FLOW
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('game-over').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
             
             // Reset
-            items.forEach(i => i.el.remove());
-            items = [];
             score = 0;
             patience = 100;
+            items = [];
+            particles = [];
+            frame = 0;
             isPlaying = true;
             
-            update();
-            spawnLoop = setInterval(spawnItem, SPAWN_RATE);
+            loop();
         }
 
         function gameOver() {
             isPlaying = false;
-            cancelAnimationFrame(gameLoop);
-            clearInterval(spawnLoop);
+            cancelAnimationFrame(animationId);
             
             const roasts = [
                 "Snapshot was taken yesterday.",
@@ -322,8 +470,8 @@
                 "You sold the bottom."
             ];
             document.getElementById('death-msg').innerText = `"${roasts[Math.floor(Math.random()*roasts.length)]}"`;
-            document.getElementById('final-score').innerText = Math.floor(score);
-            document.getElementById('game-over').classList.remove('hidden');
+            document.getElementById('finalScore').innerText = Math.floor(score);
+            document.getElementById('game-over-screen').classList.remove('hidden');
         }
 
     </script>
