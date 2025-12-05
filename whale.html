@@ -7,78 +7,162 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { background: #050201; color: white; font-family: 'Press Start 2P', cursive; text-align: center; overflow: hidden; touch-action: none; }
         
+        body { 
+            background: #050201; 
+            color: white; 
+            font-family: 'Press Start 2P', cursive; 
+            text-align: center; 
+            overflow: hidden; 
+            touch-action: none;
+        }
+        
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            justify-content: center;
+        }
+
         .game-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-            max-width: 500px; margin: 20px auto; padding: 10px;
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px;
+            width: 100%;
+            max-width: 400px; 
+            margin: 0 auto; 
+            padding: 20px;
         }
         
         .hole {
-            background: #1c100b; border: 2px solid #33180f;
-            aspect-ratio: 1/1; border-radius: 50%;
-            position: relative; overflow: hidden;
-            cursor: crosshair;
+            background: #1c100b; 
+            border: 2px solid #33180f;
+            border-radius: 50%;
+            aspect-ratio: 1/1;
+            position: relative; 
+            overflow: hidden;
+            box-shadow: inset 0 10px 0 0 rgba(0,0,0,0.5);
         }
         
         .mole {
-            position: absolute; width: 100%; height: 100%;
-            top: 100%; transition: top 0.1s;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 3rem; user-select: none;
+            position: absolute; 
+            width: 100%; 
+            height: 100%;
+            top: 100%; /* Start hidden below the hole */
+            transition: top 0.1s ease-out;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            font-size: 3rem; 
+            user-select: none;
+            cursor: pointer;
         }
         
-        .hole.up .mole { top: 0; }
+        /* When class 'up' is added, move mole to visible position */
+        .hole.up .mole { 
+            top: 0; 
+        }
         
-        .splat { color: #f97316; font-size: 40px; position: absolute; pointer-events: none; animation: fadeUp 0.5s forwards; }
-        @keyframes fadeUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
+        /* Visual Feedback on Hit */
+        .hole.bonked {
+            border-color: #f97316;
+        }
+
+        .splat { 
+            color: #f97316; 
+            font-size: 40px; 
+            position: absolute; 
+            pointer-events: none; 
+            z-index: 20;
+            animation: fadeUp 0.5s forwards; 
+        }
+        
+        @keyframes fadeUp { 
+            0% { opacity: 1; transform: scale(1); } 
+            100% { opacity: 0; transform: scale(1.5); } 
+        }
+
+        /* UI */
+        .header-ui {
+            margin-bottom: 20px;
+        }
+        
+        .score-box {
+            font-size: 14px;
+            color: #f97316;
+            margin-bottom: 5px;
+        }
+        
+        .timer-box {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Game Over Screen */
+        #game-over { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.95); 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 50; 
+            padding: 20px;
+        }
 
         .btn { 
-            background: #f97316; color: black; border: none; 
-            padding: 15px 30px; font-family: inherit; font-size: 14px;
-            margin-top: 20px; cursor: pointer; text-transform: uppercase; 
-            width: 100%; max-width: 300px; border-radius: 8px;
+            background: #f97316; 
+            color: black; 
+            border: none; 
+            padding: 15px 30px; 
+            font-family: inherit; 
+            font-size: 14px;
+            margin-top: 20px; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            border-radius: 8px;
+            width: 100%;
+            max-width: 300px;
         }
+        .btn:active { transform: scale(0.95); }
         
         .btn-exit {
-            background: transparent; color: #666; border: 2px solid #333;
-            margin-top: 15px; font-size: 10px;
+            background: transparent; 
+            color: #666; 
+            border: 2px solid #333;
+            margin-top: 15px; 
+            font-size: 10px;
         }
         .btn-exit:hover { color: white; border-color: white; }
-        
-        #game-over { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); 
-            display: none; flex-direction: column; align-items: center; justify-content: center; 
-            z-index: 50; padding: 20px;
-        }
     </style>
 </head>
-<body class="flex flex-col h-screen">
+<body>
 
-    <div class="p-6">
-        <h1 class="text-[var(--roast-orange)] text-xl mb-2">WHALE HUNTER</h1>
-        <div class="flex justify-between max-w-md mx-auto text-sm text-gray-400">
-            <span>SCORE: <span id="score" class="text-white">0</span></span>
-            <span>TIME: <span id="time" class="text-white">30</span>s</span>
+    <div id="game-container">
+        <div class="header-ui">
+            <h1 class="text-white text-xl mb-4">WHALE HUNTER</h1>
+            <div class="score-box">SCORE: <span id="score">0</span></div>
+            <div class="timer-box">TIME: <span id="time">30</span>s</div>
         </div>
-    </div>
 
-    <div class="game-grid">
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-        <div class="hole"><div class="mole">🐳</div></div>
-    </div>
+        <div class="game-grid">
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+            <div class="hole"><div class="mole">🐳</div></div>
+        </div>
 
-    <div class="mt-4 text-xs text-gray-600">TAP TO SNIPE</div>
+        <div class="mt-8 text-[10px] text-gray-600 animate-pulse">TAP TO SNIPE</div>
+    </div>
 
     <div id="game-over">
-        <h1 class="text-3xl text-[var(--roast-orange)] mb-4">TIME'S UP!</h1>
+        <h1 class="text-3xl text-[var(--roast-orange)] mb-4 text-[#f97316]">TIME'S UP!</h1>
         <p class="text-sm mb-6 text-gray-300">You sniped <span id="final-score" class="text-white font-bold">0</span> Whales.</p>
         
         <button class="btn" onclick="location.reload()">HUNT AGAIN</button>
@@ -95,6 +179,7 @@
         let timeUp = false;
         let score = 0;
         let timeLeft = 30;
+        let isPlaying = false;
 
         function randomTime(min, max) { return Math.round(Math.random() * (max - min) + min); }
 
@@ -107,26 +192,36 @@
         }
 
         function peep() {
-            const time = randomTime(400, 1000); // Speed
+            if(!isPlaying) return;
+            const time = randomTime(500, 1000); // Speed
             const hole = randomHole(holes);
             hole.classList.add('up');
+            
             setTimeout(() => {
                 hole.classList.remove('up');
-                if (!timeUp) peep();
+                if (!timeUp && isPlaying) peep();
             }, time);
         }
 
         function startGame() {
+            if(isPlaying) return;
+            isPlaying = true;
             score = 0;
             scoreBoard.textContent = 0;
             timeUp = false;
+            scoreBoard.textContent = 0;
+            timeLeft = 30;
+            timeBoard.textContent = timeLeft;
+            
             peep();
+            
             const timer = setInterval(() => {
                 timeLeft--;
                 timeBoard.textContent = timeLeft;
                 if(timeLeft <= 0) {
                     clearInterval(timer);
                     timeUp = true;
+                    isPlaying = false;
                     document.getElementById('final-score').textContent = score;
                     gameOverScreen.style.display = 'flex';
                 }
@@ -134,7 +229,10 @@
         }
 
         function bonk(e) {
-            if(!e.isTrusted) return; // Cheater check
+            // Prevent cheating / double clicks
+            if(!e.isTrusted) return; 
+            
+            // Check if mole is actually visible ('up' class on parent hole)
             if(!this.parentNode.classList.contains('up')) return;
             
             score++;
@@ -142,20 +240,31 @@
             scoreBoard.textContent = score;
             
             // Visual Effect
+            const rect = this.getBoundingClientRect();
             const splat = document.createElement('div');
             splat.classList.add('splat');
             splat.textContent = "💥";
-            splat.style.left = e.clientX + 'px';
-            splat.style.top = e.clientY + 'px';
+            
+            // Position splat exactly over the mole
+            splat.style.left = (rect.left + rect.width/2 - 20) + 'px';
+            splat.style.top = (rect.top + rect.height/2 - 20) + 'px';
             document.body.appendChild(splat);
+            
             setTimeout(() => splat.remove(), 500);
         }
 
-        holes.forEach(hole => hole.querySelector('.mole').addEventListener('click', bonk));
-        holes.forEach(hole => hole.querySelector('.mole').addEventListener('touchstart', bonk));
+        // Add Listeners
+        holes.forEach(hole => {
+            const mole = hole.querySelector('.mole');
+            mole.addEventListener('click', bonk);
+            mole.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Stop zoom
+                bonk.call(mole, e);
+            });
+        });
 
-        // Auto-start
-        setTimeout(startGame, 1000);
+        // Auto-start after small delay to let UI render
+        setTimeout(startGame, 500);
     </script>
 </body>
 </html>
