@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <title>DEGENGAMES.FUN | The Pump Arcade</title>
-    <meta name="description" content="The ultimate arcade for Solana degens. Play games, get roasted, and waste time while you hold the bag.">
+    <title>DEGENGAMES.FUN | Pump Arcade</title>
+    <meta name="description" content="The ultimate arcade for Solana degens. Play games or roast your wallet.">
     <meta name="theme-color" content="#86efac">
     <link rel="icon" href="12.png" type="image/png">
 
@@ -16,202 +16,223 @@
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;900&display=swap');
         
         :root {
-            --pump-bg: #050201;
-            --pump-card-bg: #10141f;
-            --pump-green: #86efac;
-            --pump-orange: #f97316;
-            --pump-yellow: #facc15;
-            --pump-purple: #c084fc;
+            --bg-color: #030502;
+            --card-bg: #0a100d;
+            --pump-green: #86efac; /* Primary Brand Color */
+            --pump-dark-green: #14532d;
+            --neon-blue: #3b82f6;
+            --neon-purple: #a855f7;
+            --neon-red: #ef4444;
+            --neon-orange: #f97316;
         }
 
         body {
-            background-color: var(--pump-bg);
+            background-color: var(--bg-color);
             color: white;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
-            /* Matrix-like background hint */
-            background-image: linear-gradient(rgba(0, 255, 127, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 255, 127, 0.03) 1px, transparent 1px);
-            background-size: 30px 30px;
+            /* Green Matrix-like background hint */
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(134, 239, 172, 0.1), transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.1), transparent 40%);
         }
 
         .font-pixel { font-family: 'Press Start 2P', cursive; }
 
-        /* SCANLINES */
-        .scanlines {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
-            z-index: 50;
-            opacity: 0.6;
-        }
-
-        /* GLITCH EFFECT */
-        .glitch { position: relative; }
+        /* HERO TEXT GLITCH (GREEN) */
+        .glitch-wrapper { position: relative; display: inline-block; }
+        .glitch { position: relative; z-index: 1; }
         .glitch::before, .glitch::after {
             content: attr(data-text);
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--pump-bg);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color);
         }
-        .glitch::before { left: 2px; text-shadow: -2px 0 #ff00c1; clip: rect(44px, 450px, 56px, 0); animation: glitch-anim 5s infinite linear alternate-reverse; }
-        .glitch::after { left: -2px; text-shadow: -2px 0 #00fff9; clip: rect(44px, 450px, 56px, 0); animation: glitch-anim2 5s infinite linear alternate-reverse; }
-        @keyframes glitch-anim { 0% { clip: rect(31px, 9999px, 94px, 0); } 20% { clip: rect(6px, 9999px, 8px, 0); } 40% { clip: rect(82px, 9999px, 51px, 0); } 60% { clip: rect(39px, 9999px, 6px, 0); } 80% { clip: rect(72px, 9999px, 21px, 0); } 100% { clip: rect(63px, 9999px, 86px, 0); } }
-        @keyframes glitch-anim2 { 0% { clip: rect(65px, 9999px, 95px, 0); } 20% { clip: rect(10px, 9999px, 94px, 0); } 40% { clip: rect(9px, 9999px, 14px, 0); } 60% { clip: rect(54px, 9999px, 44px, 0); } 80% { clip: rect(43px, 9999px, 63px, 0); } 100% { clip: rect(2px, 9999px, 82px, 0); } }
+        .glitch::before { left: 2px; text-shadow: -1px 0 #86efac; clip-path: inset(44% 0 61% 0); animation: glitch-anim-1 2s infinite linear alternate-reverse; }
+        .glitch::after { left: -2px; text-shadow: -1px 0 #22c55e; clip-path: inset(58% 0 43% 0); animation: glitch-anim-2 2.5s infinite linear alternate-reverse; }
+        
+        @keyframes glitch-anim-1 { 0% { clip-path: inset(20% 0 80% 0); } 20% { clip-path: inset(60% 0 10% 0); } 40% { clip-path: inset(40% 0 50% 0); } 60% { clip-path: inset(80% 0 5% 0); } 80% { clip-path: inset(10% 0 70% 0); } 100% { clip-path: inset(30% 0 20% 0); } }
+        @keyframes glitch-anim-2 { 0% { clip-path: inset(10% 0 60% 0); } 20% { clip-path: inset(80% 0 5% 0); } 40% { clip-path: inset(30% 0 20% 0); } 60% { clip-path: inset(10% 0 80% 0); } 80% { clip-path: inset(50% 0 30% 0); } 100% { clip-path: inset(70% 0 10% 0); } }
 
         /* GAME CARDS */
         .game-card {
-            background: #0d1117;
-            border: 2px solid #1f2937;
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(134, 239, 172, 0.1);
+            border-radius: 20px;
             overflow: hidden;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            box-shadow: 0 4px 0 #1f2937;
+            backdrop-filter: blur(10px);
+            display: block;
         }
         .game-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 0 var(--pump-green);
+            transform: translateY(-10px) scale(1.02);
             border-color: var(--pump-green);
+            box-shadow: 0 0 30px rgba(134, 239, 172, 0.2);
             z-index: 10;
         }
         
-        /* PLAY BUTTONS */
         .play-btn {
-            background: var(--pump-green);
-            color: black; 
-            font-family: 'Press Start 2P'; font-size: 10px;
+            background: linear-gradient(45deg, var(--pump-green), #22c55e);
+            color: black; font-family: 'Press Start 2P'; font-size: 10px;
             padding: 12px; text-align: center; width: 100%; display: block;
-            transition: all 0.1s; border-radius: 4px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 0 #059669;
+            transition: all 0.2s; border-radius: 8px;
+            text-shadow: 0 0px 0 rgba(0,0,0,0);
+            box-shadow: 0 4px 0 #15803d;
         }
-        .play-btn:active { transform: translateY(4px); box-shadow: 0 0 0; }
-        .play-btn.orange { background: var(--pump-orange); box-shadow: 0 4px 0 #c2410c; }
-        .play-btn.purple { background: var(--pump-purple); box-shadow: 0 4px 0 #7e22ce; }
+        .play-btn:active { transform: translateY(4px); box-shadow: none; }
+        .play-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
+        
+        .play-btn.orange { background: linear-gradient(45deg, #f97316, #ea580c); color: white; box-shadow: 0 4px 0 #9a3412; }
+        .play-btn.blue { background: linear-gradient(45deg, #3b82f6, #2563eb); color: white; box-shadow: 0 4px 0 #1e40af; }
+        .play-btn.purple { background: linear-gradient(45deg, #a855f7, #7e22ce); color: white; box-shadow: 0 4px 0 #581c87; }
 
+        .tag { font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-family: monospace; }
+        .tag-hot { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); }
+        .tag-new { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.5); }
+        .tag-tool { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.5); }
+        
         .section-header {
             display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
-            border-bottom: 2px solid #1f2937; padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(134, 239, 172, 0.1); padding-bottom: 1rem;
         }
 
-        .tag { font-size: 9px; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-family: 'Press Start 2P'; }
-        .tag-hot { background: #ef4444; color: black; box-shadow: 2px 2px 0 #7f1d1d; }
-        .tag-new { background: #3b82f6; color: white; box-shadow: 2px 2px 0 #1e3a8a; }
+        /* SCANLINES */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px; pointer-events: none; z-index: 50; opacity: 0.4;
+        }
+
+        /* CARD ANIMATIONS */
+        .card-bg-anim {
+            position: absolute; inset: 0; opacity: 0.2;
+            background-size: 20px 20px;
+            background-image: radial-gradient(circle, #86efac 1px, transparent 1px);
+            transition: all 0.5s ease;
+        }
+        .game-card:hover .card-bg-anim {
+            transform: scale(1.2) rotate(5deg);
+            opacity: 0.4;
+        }
     </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen flex flex-col">
+<body class="p-6 md:p-12 min-h-screen flex flex-col">
 
     <div class="scanlines"></div>
 
-    <nav class="flex justify-between items-center mb-16 relative z-20">
+    <nav class="flex justify-between items-center mb-20 relative z-20">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-white border-2 border-black rounded-lg flex items-center justify-center shadow-[4px_4px_0px_#86efac]">
-                <img src="12.png" class="w-full h-full object-cover">
+            <div class="w-10 h-10 bg-gradient-to-tr from-green-600 to-emerald-600 rounded-lg flex items-center justify-center transform rotate-3 shadow-lg border border-green-400">
+                <i data-lucide="gamepad-2" class="text-white w-6 h-6"></i>
             </div>
             <div class="flex flex-col">
-                <span class="font-pixel text-[var(--pump-green)] text-xs mb-1">DEGEN</span>
-                <span class="text-[10px] font-bold text-gray-500 tracking-[0.3em]">GAMES</span>
+                <span class="font-pixel text-white text-sm tracking-widest">DEGEN</span>
+                <span class="text-[10px] font-bold text-[var(--pump-green)] tracking-[0.3em]">GAMES</span>
             </div>
         </div>
-        <div class="flex gap-3">
-            <a href="https://twitter.com" target="_blank" class="bg-[#1DA1F2] text-white p-2 rounded hover:brightness-110 shadow-[4px_4px_0px_#0e71ac] transition-all active:translate-y-1 active:shadow-none"><i data-lucide="twitter" width="16"></i></a>
-            <a href="https://pump.fun" target="_blank" class="bg-[var(--pump-green)] text-black p-2 rounded hover:brightness-110 shadow-[4px_4px_0px_#059669] transition-all active:translate-y-1 active:shadow-none"><i data-lucide="coins" width="16"></i></a>
+        <div class="flex gap-4">
+            <a href="https://twitter.com" target="_blank" class="text-gray-400 hover:text-white transition-colors"><i data-lucide="twitter" width="20"></i></a>
+            <a href="https://pump.fun" target="_blank" class="text-gray-400 hover:text-white transition-colors"><i data-lucide="coins" width="20"></i></a>
         </div>
     </nav>
 
-    <div class="text-center mb-20 relative z-20">
-        <div class="inline-block px-3 py-2 rounded bg-[#1f2937] text-[var(--pump-green)] text-[10px] font-pixel mb-6 shadow-[4px_4px_0px_black]">
-            BETA v1.0 • PUMP.FUN READY
+    <div class="text-center mb-24 relative z-20">
+        <div class="inline-block px-4 py-1 rounded-full border border-green-500/30 bg-green-500/10 text-[var(--pump-green)] text-xs font-mono mb-6 animate-pulse">
+            💊 PUMP.FUN SEASON IS HERE
         </div>
-        <h1 class="text-3xl md:text-6xl font-black text-white mb-6 glitch" data-text="DEGEN GAMES">
-            DEGEN GAMES
+        <h1 class="text-4xl md:text-7xl font-black text-white mb-6 glitch-wrapper">
+            <span class="glitch" data-text="DEGEN GAMES">DEGEN GAMES</span>
         </h1>
-        <p class="text-gray-400 max-w-lg mx-auto text-sm md:text-base font-mono leading-relaxed">
-            The first arcade where you win nothing and lose everything.
-            <span class="text-[var(--pump-orange)]">Play games</span> or <span class="text-[var(--pump-green)]">roast your wallet</span>.
+        <p class="text-gray-400 max-w-lg mx-auto text-sm md:text-base leading-relaxed font-mono">
+            The first arcade where you win nothing and lose everything. 
+            <span class="text-[var(--pump-green)]">Play games</span>. <span class="text-orange-500">Get roasted</span>. <span class="text-purple-500">Cope</span>.
         </p>
     </div>
 
-    <div class="max-w-6xl mx-auto relative z-20 space-y-20">
+    <div class="max-w-6xl mx-auto relative z-20 space-y-24">
 
         <section>
             <div class="section-header">
-                <i data-lucide="joystick" class="text-[var(--pump-purple)]"></i>
-                <h2 class="font-pixel text-[var(--pump-purple)] text-xs">ARCADE ZONE</h2>
+                <i data-lucide="joystick" class="text-[var(--pump-green)]"></i>
+                <h2 class="font-pixel text-[var(--pump-green)] text-sm">ARCADE ZONE</h2>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 
-                <a href="game.html" class="game-card group block">
-                    <div class="h-40 bg-[#111] flex flex-col items-center justify-center border-b-2 border-[#1f2937] relative overflow-hidden">
-                        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#22c55e 1px, transparent 1px); background-size: 10px 10px;"></div>
-                        <div class="absolute top-3 right-3"><span class="tag tag-new">NEW</span></div>
-                        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(34,197,94,0.5)]">🏃</span>
-                    </div>
-                    <div class="p-5">
-                        <h3 class="font-bold text-sm text-white mb-2 font-pixel">RUG RUN</h3>
-                        <p class="text-xs text-gray-500 mb-6 h-8 font-mono">Endless runner. Dodge red candles & collect SOL.</p>
-                        <span class="play-btn">PLAY NOW</span>
-                    </div>
-                </a>
-
-                <a href="shooter.html" class="game-card group block">
-                    <div class="h-40 bg-[#111] flex flex-col items-center justify-center border-b-2 border-[#1f2937] relative overflow-hidden">
-                        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#3b82f6 1px, transparent 1px); background-size: 10px 10px;"></div>
-                        <div class="absolute top-3 right-3"><span class="tag tag-new">HOT</span></div>
-                        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">🚀</span>
-                    </div>
-                    <div class="p-5">
-                        <h3 class="font-bold text-sm text-white mb-2 font-pixel">JEET SHOOTER</h3>
-                        <p class="text-xs text-gray-500 mb-6 h-8 font-mono">Space Invaders style. Blast the FUD & paper hands.</p>
-                        <span class="play-btn">PLAY NOW</span>
-                    </div>
-                </a>
-
-                <a href="whale.html" class="game-card group block">
-                    <div class="h-40 bg-[#111] flex flex-col items-center justify-center border-b-2 border-[#1f2937] relative overflow-hidden">
-                        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#a855f7 1px, transparent 1px); background-size: 10px 10px;"></div>
-                        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">🐳</span>
-                    </div>
-                    <div class="p-5">
-                        <h3 class="font-bold text-sm text-white mb-2 font-pixel">WHALE HUNTER</h3>
-                        <p class="text-xs text-gray-500 mb-6 h-8 font-mono">Whack-a-Mole style. Snipe whales before they dump.</p>
-                        <span class="play-btn">PLAY NOW</span>
-                    </div>
-                </a>
-
                 <a href="airdrop.html" class="game-card group">
-    <div class="h-40 bg-gradient-to-br from-yellow-900/50 to-orange-900/50 flex flex-col items-center justify-center border-b border-white/5 relative">
-        <div class="absolute top-3 right-3"><span class="tag tag-new">TROLL</span></div>
-        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300">📦</span>
-    </div>
-    <div class="p-5">
-        <h3 class="font-bold text-lg text-white mb-1 font-pixel">Airdrop Hunter</h3>
-        <p class="text-xs text-gray-400 mb-6 h-8">Try to catch the $PUMP airdrop. Spoiler: You can't.</p>
-        <span class="play-btn orange">PLAY NOW</span>
-    </div>
-</a>
+                    <div class="h-40 bg-gradient-to-br from-green-900/80 to-emerald-950 flex flex-col items-center justify-center border-b border-white/5 relative overflow-hidden">
+                        <div class="card-bg-anim" style="background-image: radial-gradient(#86efac 1px, transparent 1px);"></div>
+                        <div class="absolute top-3 right-3"><span class="tag tag-new">NEW</span></div>
+                        <div class="relative transform group-hover:scale-110 transition-transform duration-300">
+                            <span class="text-5xl relative z-10">📦</span>
+                            <div class="absolute inset-0 bg-green-400 blur-xl opacity-30"></div>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-sm text-white mb-1 font-pixel group-hover:text-green-400">Airdrop Hunter</h3>
+                        <p class="text-[10px] text-gray-400 mb-4 h-8 leading-relaxed">Catch the $PUMP airdrop. Spoiler: You can't.</p>
+                        <span class="play-btn">PLAY NOW</span>
+                    </div>
+                </a>
+
+                <a href="game.html" class="game-card group">
+                    <div class="h-40 bg-gradient-to-br from-[#0a2f1c] to-[#050201] flex flex-col items-center justify-center border-b border-white/5 relative overflow-hidden">
+                        <div class="card-bg-anim"></div>
+                        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300">🏃</span>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-sm text-white mb-1 font-pixel group-hover:text-green-400">Rug Run</h3>
+                        <p class="text-[10px] text-gray-400 mb-4 h-8 leading-relaxed">Endless runner. Dodge red candles.</p>
+                        <span class="play-btn">PLAY NOW</span>
+                    </div>
+                </a>
+
+                <a href="shooter.html" class="game-card group">
+                    <div class="h-40 bg-gradient-to-br from-[#0f172a] to-[#050201] flex flex-col items-center justify-center border-b border-white/5 relative overflow-hidden">
+                        <div class="card-bg-anim" style="background-image: radial-gradient(#3b82f6 1px, transparent 1px);"></div>
+                        <div class="absolute top-3 right-3"><span class="tag tag-hot">HOT</span></div>
+                        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300">🚀</span>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-sm text-white mb-1 font-pixel group-hover:text-blue-400">Jeet Shooter</h3>
+                        <p class="text-[10px] text-gray-400 mb-4 h-8 leading-relaxed">Blast the FUD and paper hands.</p>
+                        <span class="play-btn blue">PLAY NOW</span>
+                    </div>
+                </a>
+
+                <a href="whale.html" class="game-card group">
+                    <div class="h-40 bg-gradient-to-br from-[#2e1065] to-[#050201] flex flex-col items-center justify-center border-b border-white/5 relative overflow-hidden">
+                        <div class="card-bg-anim" style="background-image: radial-gradient(#a855f7 1px, transparent 1px);"></div>
+                        <span class="text-5xl transform group-hover:scale-110 transition-transform duration-300">🐳</span>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-sm text-white mb-1 font-pixel group-hover:text-purple-400">Whale Hunter</h3>
+                        <p class="text-[10px] text-gray-400 mb-4 h-8 leading-relaxed">Snipe whales before they dump.</p>
+                        <span class="play-btn purple">PLAY NOW</span>
+                    </div>
+                </a>
 
             </div>
         </section>
 
         <section>
             <div class="section-header">
-                <i data-lucide="wrench" class="text-[var(--pump-orange)]"></i>
-                <h2 class="font-pixel text-[var(--pump-orange)] text-xs">DEGEN UTILITIES</h2>
+                <i data-lucide="wrench" class="text-orange-500"></i>
+                <h2 class="font-pixel text-orange-500 text-sm">DEGEN UTILITIES</h2>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <a href="scanner.html" class="game-card group col-span-1 md:col-span-2">
-                    <div class="h-48 bg-[#111] flex flex-col items-center justify-center border-b-2 border-[#1f2937] relative overflow-hidden group-hover:bg-[#1f1505] transition-colors">
-                        <div class="absolute top-3 right-3 flex gap-2"><span class="tag tag-hot">POPULAR</span></div>
-                        <div class="flex items-center gap-6">
-                            <img src="12.png" class="w-24 h-24 drop-shadow-[0_0_20px_rgba(249,115,22,0.4)] group-hover:rotate-12 transition-transform duration-300">
+                    <div class="h-48 bg-gradient-to-br from-orange-900/50 to-red-900/50 flex flex-col items-center justify-center border-b border-white/5 group-hover:from-orange-800/50 group-hover:to-red-800/50 transition-colors relative overflow-hidden">
+                        <div class="card-bg-anim" style="background-image: radial-gradient(#f97316 1px, transparent 1px);"></div>
+                        <div class="absolute top-3 right-3 flex gap-2">
+                            <span class="tag tag-hot">POPULAR</span>
+                            <span class="tag tag-tool">TOOL</span>
+                        </div>
+                        <div class="flex items-center gap-6 relative z-10">
+                            <img src="12.png" class="w-24 h-24 drop-shadow-2xl group-hover:rotate-12 transition-transform duration-300">
                             <div class="text-left">
-                                <h3 class="font-bold text-2xl text-white font-pixel mb-2">ROAST ME</h3>
-                                <div class="text-[10px] text-[var(--pump-orange)] font-mono bg-orange-900/20 px-2 py-1 inline-block rounded">WALLET ANALYZER + LEADERBOARD</div>
+                                <h3 class="font-bold text-2xl text-white font-pixel mb-2 group-hover:text-orange-300">ROAST ME</h3>
+                                <div class="text-[10px] text-[var(--pump-green)] font-mono bg-green-900/30 border border-green-500/30 px-2 py-1 inline-block rounded">WALLET ANALYZER + LEADERBOARD</div>
                             </div>
                         </div>
                     </div>
@@ -221,9 +242,9 @@
                     </div>
                 </a>
                 
-                <div class="game-card border-dashed border-gray-700 opacity-60">
-                    <div class="h-48 flex items-center justify-center bg-black">
-                        <span class="text-4xl">🔒</span>
+                <div class="game-card opacity-50 border-dashed border-gray-700 hidden lg:block">
+                    <div class="h-48 flex items-center justify-center bg-black/50">
+                        <span class="text-4xl grayscale">🔒</span>
                     </div>
                     <div class="p-6 text-center">
                         <h3 class="font-bold text-sm text-gray-500 mb-2 font-pixel">COMING SOON</h3>
