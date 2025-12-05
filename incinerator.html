@@ -99,18 +99,41 @@
         let userWallet = null;
         let tokenAccounts = [];
         let selectedAccounts = new Set();
+        let provider = null;
+
+        // --- UNIVERSAL WALLET DETECTOR ---
+        function getWalletProvider() {
+            if ("jupiter" in window) return window.jupiter;
+            if ("solflare" in window) return window.solflare;
+            if ("phantom" in window) {
+                const provider = window.phantom?.solana;
+                if (provider?.isPhantom) return provider;
+            }
+            // Fallback standard
+            if ("solana" in window) return window.solana;
+            return null;
+        }
 
         async function connectAndScan() {
             const status = document.getElementById('status-msg');
-            
-            // FIX: Check for ANY solana provider, not just Phantom
-            const provider = window.solana || window.jupiter; 
+            provider = getWalletProvider();
 
             if (provider) {
                 try {
                     status.innerText = "Connecting...";
-                    const resp = await provider.connect();
-                    userWallet = resp.publicKey;
+                    
+                    // Handle connection response (some wallets return immediately, others promise)
+                    let resp;
+                    if(!provider.isConnected) {
+                         resp = await provider.connect();
+                    } else {
+                         resp = { publicKey: provider.publicKey };
+                    }
+
+                    userWallet = resp.publicKey || provider.publicKey;
+                    
+                    if(!userWallet) throw new Error("Wallet connected but no public key found.");
+
                     status.innerText = "Scanning Blockchain...";
                     
                     // Fetch Accounts
@@ -120,13 +143,11 @@
 
                     processAccounts(accounts.value);
                 } catch (err) {
-                    status.innerText = "Connection Failed: " + err.message;
+                    console.error(err);
+                    status.innerText = "Error: " + err.message;
                 }
             } else {
-                // Fallback if no wallet found
-                alert("No Solana wallet found. Please install Phantom, Solflare, or open this in the Jupiter App.");
-                // Only redirect if truly nothing is found, or just let them stay
-                // window.open("https://phantom.app/", "_blank"); 
+                alert("No Solana wallet found! Please install Phantom, Solflare, or open in Jupiter.");
             }
         }
 
@@ -219,19 +240,30 @@
                 
                 selectedAccounts.forEach(idx => {
                     const token = tokenAccounts[idx];
-                    const tokenPubkey = token.pubkey;
+                    const tokenPubkey = new PublicKey(token.pubkey);
                     
                     // Close Account Instruction
                     const closeIx = createCloseAccountInstruction(
                         tokenPubkey, 
-                        userWallet, 
-                        userWallet 
+                        userWallet, // Destination for rent
+                        userWallet  // Owner authority
                     );
                     transaction.add(closeIx);
                 });
 
-                const provider = window.solana || window.jupiter;
+                // Get Latest Blockhash
+                const { blockhash } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = userWallet;
+
+                // Sign and Send via the detected provider
                 const { signature } = await provider.signAndSendTransaction(transaction);
+                
+                // UI Feedback
+                const btn = document.getElementById('burn-btn');
+                btn.innerText = "BURNING...";
+                btn.disabled = true;
+
                 await connection.confirmTransaction(signature);
                 
                 alert(`Success! Reclaimed SOL. TX: ${signature.slice(0,8)}...`);
@@ -239,7 +271,7 @@
 
             } catch (e) {
                 console.error(e);
-                alert("Transaction Failed. Note: You can only close EMPTY accounts with this version.");
+                alert("Transaction Failed. Note: You can only close EMPTY accounts with this version. If the token has balance, you must burn the tokens first (advanced feature).");
             }
         }
     </script>
