@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Pill | DEGENGAMES.FUN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="12.png" type="image/png">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        :root {
+            --pump-bg: #050201;
+            --pump-green: #86efac;
+            --pump-red: #ef4444;
+            --pump-dark: #1a1a1a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--pump-bg);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #0f172a 0%, #020617 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            background: rgba(0,0,0,0.3);
+            border-left: 2px solid var(--pump-green);
+            border-right: 2px solid var(--pump-green);
+            box-shadow: 0 0 50px rgba(134, 239, 172, 0.1);
+            width: 100%;
+            max-width: 480px; /* Mobile phone aspect ratio usually better for flappy */
+            height: 100%;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 20; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        .nav-btn {
+            pointer-events: auto;
+            background: rgba(255,255,255,0.1);
+            padding: 10px; border-radius: 8px;
+            color: white; border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-btn:hover { background: var(--pump-green); color: black; border-color: var(--pump-green); }
+
+        /* Screens */
+        #start-screen, #game-over-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(16, 20, 31, 0.98);
+            padding: 30px; border: 4px solid var(--pump-green); border-radius: 16px;
+            pointer-events: auto; z-index: 50;
+            box-shadow: 0 0 40px rgba(134, 239, 172, 0.2);
+            width: 85%; max-width: 350px;
+        }
+
+        .btn {
+            background: var(--pump-green);
+            color: black; border: none;
+            padding: 15px 20px; font-family: 'Press Start 2P'; font-size: 12px;
+            cursor: pointer; margin-top: 20px; border-radius: 8px; width: 100%;
+            box-shadow: 0 4px 0 #059669; transition: transform 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: none; }
+        
+        .btn-exit {
+            background: transparent; color: #666; border: 2px solid #333; box-shadow: none;
+            margin-top: 10px; font-size: 10px; padding: 12px;
+        }
+        .btn-exit:hover { color: white; border-color: white; }
+
+        .hidden { display: none !important; }
+
+        /* Background Scroll */
+        .bg-scroll {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 127, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 127, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 0;
+            animation: scrollBg 20s linear infinite;
+        }
+        @keyframes scrollBg { from { background-position: 0 0; } to { background-position: -40px 40px; } }
+
+        /* Scanlines */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px; pointer-events: none; z-index: 60; opacity: 0.4;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <div class="bg-scroll"></div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-layer">
+            <div class="flex justify-between w-full items-start">
+                <a href="index.html" class="nav-btn"><i data-lucide="arrow-left" width="20"></i></a>
+                <div class="text-center">
+                    <div class="text-[var(--pump-green)] text-2xl drop-shadow-md" id="scoreVal">0</div>
+                </div>
+                <div style="width:40px"></div> </div>
+        </div>
+
+        <div id="start-screen">
+            <div class="text-5xl mb-6 animate-bounce">💊</div>
+            <h1 class="text-xl mb-4 text-[var(--pump-green)]">FLAPPY PILL</h1>
+            <p class="text-[10px] text-gray-400 mb-6 leading-6">
+                Dodge the Red Candles.<br>
+                Don't crash the chart.<br><br>
+                [TAP] or [SPACE] to Pump
+            </p>
+            <button class="btn" onclick="startGame()">SEND IT</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1 class="text-2xl mb-2 text-red-500">LIQUIDATED</h1>
+            <p id="death-msg" class="text-[10px] text-gray-300 mb-6 italic">"You bought the top."</p>
+            <div class="text-xs mb-4 text-white">SCORE: <span id="finalScore">0</span></div>
+            <button class="btn" onclick="resetGame()">REVENGE TRADE</button>
+            <button class="btn btn-exit" onclick="window.location.href='index.html'">EXIT TO LOBBY</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // AUDIO
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const actx = new AudioContext();
+        function beep(freq, type, duration, vol=0.1) {
+            if (actx.state === 'suspended') actx.resume();
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, actx.currentTime);
+            gain.gain.setValueAtTime(vol, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(actx.destination);
+            osc.start();
+            osc.stop(actx.currentTime + duration);
+        }
+        function playJump() { beep(400, 'square', 0.1, 0.05); }
+        function playScore() { beep(1200, 'sine', 0.1, 0.05); }
+        function playCrash() { beep(100, 'sawtooth', 0.5, 0.2); }
+
+        // SETUP
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ASSETS
+        const pillImg = new Image();
+        pillImg.src = '12.png'; // YOUR LOGO
+
+        // VARIABLES
+        let frames = 0;
+        let score = 0;
+        let isPlaying = false;
+        let animationId;
+
+        // SETTINGS
+        const gravity = 0.25;
+        const speed = 3; // Scroll speed
+        const jumpStrength = -4.5;
+        const pipeGap = 150; // Space between candles
+        const pipeFrequency = 120; // Frames between pipes
+
+        const bird = {
+            x: 50,
+            y: 150,
+            w: 34,
+            h: 34,
+            velocity: 0,
+            rotation: 0,
+            
+            draw: function() {
+                ctx.save();
+                ctx.translate(this.x + this.w/2, this.y + this.h/2);
+                
+                // Rotation logic: tilt up when jumping, down when falling
+                if (this.velocity < 0) this.rotation = -25 * Math.PI / 180;
+                else {
+                    this.rotation += 2 * Math.PI / 180;
+                    if(this.rotation > 90 * Math.PI / 180) this.rotation = 90 * Math.PI / 180;
+                }
+                ctx.rotate(this.rotation);
+
+                if(pillImg.complete && pillImg.naturalHeight !== 0) {
+                     ctx.drawImage(pillImg, -this.w/2, -this.h/2, this.w, this.h);
+                } else {
+                    // Fallback drawing of a pill if image missing
+                    ctx.fillStyle = '#86efac';
+                    ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            },
+            
+            update: function() {
+                this.velocity += gravity;
+                this.y += this.velocity;
+
+                // Floor/Ceiling collision
+                if (this.y + this.h >= canvas.height || this.y < 0) {
+                    gameOver();
+                }
+            },
+            
+            jump: function() {
+                this.velocity = jumpStrength;
+                playJump();
+            }
+        }
+
+        const pipes = {
+            items: [],
+            
+            draw: function() {
+                for (let i = 0; i < this.items.length; i++) {
+                    let p = this.items[i];
+                    
+                    // Draw Candles (Red)
+                    ctx.fillStyle = '#ef4444'; // Bearish Red
+                    
+                    // Top Candle
+                    ctx.fillRect(p.x, 0, p.w, p.top);
+                    // Wick Top
+                    ctx.fillStyle = '#fca5a5';
+                    ctx.fillRect(p.x + p.w/2 - 2, p.top - 20, 4, 20); 
+
+                    // Bottom Candle
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(p.x, canvas.height - p.bottom, p.w, p.bottom);
+                    // Wick Bottom
+                    ctx.fillStyle = '#fca5a5';
+                    ctx.fillRect(p.x + p.w/2 - 2, canvas.height - p.bottom, 4, 20);
+                }
+            },
+            
+            update: function() {
+                if (frames % pipeFrequency === 0) {
+                    // Logic to ensure gap is playable
+                    const minHeight = 50;
+                    const maxPos = canvas.height - minHeight - pipeGap;
+                    const topHeight = Math.floor(Math.random() * (maxPos - minHeight + 1) + minHeight);
+                    
+                    this.items.push({
+                        x: canvas.width,
+                        w: 50,
+                        top: topHeight,
+                        bottom: canvas.height - (topHeight + pipeGap),
+                        passed: false
+                    });
+                }
+
+                for (let i = 0; i < this.items.length; i++) {
+                    let p = this.items[i];
+                    p.x -= speed;
+
+                    // Collision
+                    if (
+                        bird.x + bird.w > p.x && 
+                        bird.x < p.x + p.w && 
+                        (bird.y < p.top || bird.y + bird.h > canvas.height - p.bottom)
+                    ) {
+                        gameOver();
+                    }
+
+                    // Score
+                    if (p.x + p.w < bird.x && !p.passed) {
+                        score++;
+                        p.passed = true;
+                        document.getElementById('scoreVal').innerText = score;
+                        playScore();
+                    }
+
+                    // Remove off-screen
+                    if (p.x + p.w < 0) {
+                        this.items.shift();
+                        i--;
+                    }
+                }
+            }
+        }
+
+        // GAME LOOP
+        function loop() {
+            if(!isPlaying) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            pipes.update();
+            pipes.draw();
+            
+            bird.update();
+            bird.draw();
+            
+            frames++;
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function resizeCanvas() {
+            const parent = document.getElementById('game-container');
+            canvas.width = parent.offsetWidth > 480 ? 480 : parent.offsetWidth;
+            canvas.height = parent.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // INPUT
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if(!isPlaying && document.getElementById('start-screen').classList.contains('hidden') == false) startGame();
+                else bird.jump();
+            }
+        });
+        window.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if(!isPlaying && document.getElementById('start-screen').classList.contains('hidden') == false) startGame();
+            else bird.jump();
+        }, {passive: false});
+        window.addEventListener('mousedown', (e) => {
+             if(!isPlaying && document.getElementById('start-screen').classList.contains('hidden') == false) startGame();
+             else bird.jump();
+        });
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            
+            // Reset vars
+            bird.y = 150;
+            bird.velocity = 0;
+            bird.rotation = 0;
+            pipes.items = [];
+            score = 0;
+            frames = 0;
+            document.getElementById('scoreVal').innerText = "0";
+            
+            isPlaying = true;
+            loop();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            playCrash();
+            
+            const roasts = [
+                "Chart rugged.",
+                "Limit order failed.",
+                "You are exit liquidity.",
+                "Dev sold.",
+                "Support broken."
+            ];
+            document.getElementById('death-msg').innerText = `"${roasts[Math.floor(Math.random()*roasts.length)]}"`;
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('game-over-screen').classList.remove('hidden');
+            document.getElementById('game-over-screen').style.display = 'block';
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+    </script>
+</body>
+</html>
