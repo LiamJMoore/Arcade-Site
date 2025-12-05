@@ -4,194 +4,337 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Scanner | RoastMe.fun</title>
+    <link rel="icon" href="12.png" type="image/png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="icon" href="12.png" type="image/png">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Press+Start+2P&family=Kalam:wght@700&display=swap');
-        :root { --roast-bg: #050201; --roast-orange: #f97316; --roast-card: #1c100b; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--roast-bg); color: white; overflow-x: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Press+Start+2P&family=Kalam:wght@700&family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@700;900&display=swap');
+        
+        :root { 
+            --roast-bg: #0f0502; --roast-orange: #f97316; --roast-fire: #ef4444; 
+            --roast-yellow: #facc15; --roast-card: #1c100b; --roast-text: #fed7aa; --roast-blue: #60a5fa;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--roast-bg); color: white; overflow-x: hidden; background: #050201; }
+        
+        #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.1; pointer-events: none; }
+        nav, header, #results-section { position: relative; z-index: 10; }
         .font-pixel { font-family: 'Press Start 2P', cursive; }
+        .font-hand { font-family: 'Kalam', cursive; }
+        .animate-marquee { animation: drift 30s linear infinite; }
+        @keyframes drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
         .roast-card { background-color: var(--roast-card); border: 2px solid rgba(249, 115, 22, 0.1); transition: all 0.2s; position: relative; overflow: hidden; }
-        .roast-card:hover { border-color: var(--roast-orange); transform: translateY(-2px); box-shadow: 0 0 20px rgba(249, 115, 22, 0.2); }
+        .roast-card:hover { border-color: var(--roast-orange); transform: translateY(-5px); box-shadow: 0 0 20px rgba(249, 115, 22, 0.2); z-index: 10; }
+        
+        /* CARD VISIBILITY & STYLES (FULL SET) */
         .card-variant { display: none !important; }
         .card-variant.active { display: block !important; animation: popIn 0.3s ease; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        /* Include all your detailed card CSS here if needed, keeping it light for this specific file */
-        .report-paper { background: #0d1117; width: 350px; border-radius: 20px; overflow: hidden; border: 2px solid #333; position: relative; }
-        .report-header { background: #161b22; padding: 20px; border-bottom: 2px solid var(--roast-orange); }
-        .report-stamp { position: absolute; top: 10px; right: 10px; font-size: 2.5rem; font-weight: 900; color: #ef4444; border: 4px solid #ef4444; padding: 5px; transform: rotate(-12deg); opacity: 0.8; font-family: 'Press Start 2P'; z-index: 50; background: rgba(0,0,0,0.5); }
-        #results-section { display: none; } /* Hidden by default */
-        .wrapped-card { aspect-ratio: 1/1; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .theme-dark { background: #1a1a1a; border: 2px solid #333; color: white; }
+
+        .report-paper { background: #0f0502; color: white; width: 350px; border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(249, 115, 22, 0.1); border: 2px solid #33180f; position: relative; }
+        .report-header { background: #1c0a05; padding: 20px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--roast-orange); }
+        .report-stamp { position: absolute; top: 12px; right: 12px; font-size: 2.2rem; font-weight: 900; color: var(--roast-fire); border: 4px solid var(--roast-fire); padding: 5px; transform: rotate(-12deg); opacity: 0.9; font-family: 'Press Start 2P'; z-index: 50; background: rgba(0,0,0,0.8); }
+        
+        .receipt-paper { background: #fff; color: #000; width: 320px; padding: 20px; font-family: 'Courier Prime'; position: relative; }
+        .receipt-paper::before { content: ''; position: absolute; top: -5px; left: 0; width: 100%; height: 10px; background: radial-gradient(circle, transparent, transparent 50%, #fff 50%, #fff 100%) -7px -8px / 16px 16px repeat-x; }
+        
+        .poke-card { width: 320px; background: #facc15; padding: 10px; border-radius: 12px; }
+        .poke-inner { background: #d7b836; padding: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+        
+        .wanted-paper { width: 320px; background: #e6ccaa; padding: 20px; color: #3e2723; text-align: center; border: 2px solid #3e2723; background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png'); }
+        
+        .story-paper { width: 320px; height: 568px; background: linear-gradient(to bottom, #1a2332, #0d1117); color: white; border-radius: 24px; border: 4px solid var(--roast-orange); text-align: center; }
+
+        .wrapped-card { aspect-ratio: 1/1; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; overflow: hidden; background: #1c100b; border: 1px solid #333; }
+        .theme-green { background: var(--roast-orange); color: black; }
+        .style-tab { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; font-size: 10px; cursor: pointer; color: #aaa; }
+        .style-tab.active { background: var(--roast-orange); color: black; }
+        .live-item { font-size: 10px; padding: 5px; border-bottom: 1px solid #222; color: #666; font-family: monospace; }
+        
+        /* Modal */
+        #report-card-modal, #hall-of-fame-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="min-h-screen pt-4 pb-20">
-    <nav class="flex justify-between items-center px-6 mb-8">
+<body class="min-h-screen pt-4">
+
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="fixed top-0 left-0 w-full bg-[var(--roast-yellow)] text-black font-bold font-mono text-xs py-2 breaking-news z-50">
+        <div class="whitespace-nowrap flex animate-marquee" id="ticker-content">
+            <span class="mx-4">🔥 GET COOKED ON-CHAIN 🔥</span>
+            <span class="mx-4">● CONNECTING TO SOLANA ●</span>
+        </div>
+    </div>
+
+    <nav class="flex justify-between items-center px-6 mt-8 mb-8 z-40 relative">
         <a href="index.html" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-bold font-mono">
             <i data-lucide="arrow-left" width="14"></i> ARCADE LOBBY
         </a>
-        <div class="text-[var(--roast-orange)] font-pixel text-xs">ROASTME<span class="text-white">.FUN</span></div>
+        <div class="flex items-center gap-2">
+            <img src="12.png" class="w-8 h-8 rounded-full border border-orange-500">
+            <div class="text-[var(--roast-orange)] font-pixel text-xs">ROASTME<span class="text-white">.FUN</span></div>
+        </div>
     </nav>
 
-    <div id="input-section" class="container mx-auto px-4 max-w-lg text-center mt-20">
-        <img src="12.png" class="w-24 h-24 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(249,115,22,0.5)]">
+    <div id="input-section" class="container mx-auto px-4 max-w-lg text-center mt-10 relative z-20">
+        <img src="12.png" class="w-24 h-24 mx-auto mb-6 animate-pulse drop-shadow-[0_0_20px_rgba(249,115,22,0.5)]">
         <h1 class="text-2xl md:text-3xl font-pixel mb-6 leading-tight text-white">
             WALLET <span class="text-[var(--roast-orange)]">SCANNER</span>
         </h1>
         <div class="bg-[#1c100b] p-2 rounded-xl flex flex-col items-center border border-[var(--roast-orange)]/30 shadow-2xl">
-            <input type="text" id="wallet-input" placeholder="Paste Solana Address..." class="bg-transparent text-white px-4 py-3 w-full focus:outline-none font-mono text-xs text-center placeholder-gray-600">
-            <button onclick="fetchRealStats()" class="w-full bg-[var(--roast-orange)] text-black font-pixel text-[10px] px-6 py-4 rounded mt-2 hover:bg-white transition-colors">
-                SCAN NOW
-            </button>
+            <input type="text" id="wallet-input" placeholder="Paste Solana Address..." class="bg-transparent text-white px-4 py-3 w-full focus:outline-none font-mono text-xs text-center placeholder-gray-600" onkeypress="handleEnter(event)">
+            <button onclick="fetchRealStats()" class="w-full bg-[var(--roast-orange)] text-black font-pixel text-[10px] px-6 py-4 rounded mt-2 hover:bg-white transition-colors">SCAN NOW</button>
         </div>
         <div id="loading-ui" class="hidden mt-4 text-[10px] font-mono text-[var(--roast-orange)] animate-pulse">READING CHAIN DATA...</div>
     </div>
 
-    <div id="results-section" class="container mx-auto max-w-4xl px-4 mt-10">
-        <div class="flex flex-col md:flex-row gap-6">
+    <div id="results-section" class="container mx-auto max-w-5xl px-4 mt-10 relative z-20" style="display:none;">
+        <div class="flex flex-col lg:flex-row gap-6">
+            
             <div class="flex-1 space-y-4">
-                <div class="roast-card p-6 rounded-xl border-l-4 border-[var(--roast-orange)]">
-                    <div class="text-[10px] text-gray-500 font-mono">GRADE</div>
-                    <div id="grade-display" class="text-6xl font-pixel text-[var(--roast-orange)]">?</div>
-                    <div id="risk-val" class="text-xs font-bold text-red-500 mt-2">CALCULATING RISK...</div>
+                <div class="roast-card p-6 rounded-xl border-l-4 border-[var(--roast-orange)] bg-gradient-to-r from-[#1c100b] to-black">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-[10px] text-gray-500 font-mono mb-1">FINAL GRADE</div>
+                            <div class="text-xs text-[var(--roast-orange)]">Risk: <span id="risk-val">CALCULATING</span></div>
+                        </div>
+                        <div id="grade-display" class="text-7xl font-pixel text-white">?</div>
+                    </div>
                 </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div class="roast-card p-4 rounded-xl">
-                        <div class="text-[10px] text-gray-500">NET WORTH</div>
-                        <div id="real-balance" class="text-lg font-bold">0.00 SOL</div>
+                        <div class="text-[10px] text-gray-500 mb-1">NET WORTH</div>
+                        <div id="real-balance" class="text-lg font-bold font-mono text-white">0.00</div>
                     </div>
                     <div class="roast-card p-4 rounded-xl">
-                        <div class="text-[10px] text-gray-500">BAGS</div>
-                        <div id="real-token-count" class="text-lg font-bold">0</div>
+                        <div class="text-[10px] text-gray-500 mb-1">BAGS</div>
+                        <div id="real-token-count" class="text-lg font-bold font-mono text-white">0</div>
                     </div>
                 </div>
-                <div class="flex gap-2">
-                    <button id="view-report-btn" onclick="openModal()" class="flex-1 bg-[var(--roast-orange)] text-black font-bold py-3 rounded-lg text-xs flex justify-center gap-2 items-center hover:bg-white">
-                        <i data-lucide="eye" width="14"></i> SEE CARD
-                    </button>
-                    <button onclick="location.reload()" class="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20"><i data-lucide="refresh-cw" width="14"></i></button>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button id="view-report-btn" onclick="openModal()" class="bg-[var(--roast-orange)] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white transition-colors"><i data-lucide="flame" width="14"></i> SEE CARD</button>
+                    <button onclick="openHallOfFame()" class="bg-[var(--roast-yellow)] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white"><i data-lucide="trophy" width="14"></i> LEADERS</button>
+                    <button onclick="openBubbleMap()" class="bg-[#c084fc] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white"><i data-lucide="aperture" width="14"></i> MAP</button>
+                    <button onclick="location.reload()" class="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 flex justify-center"><i data-lucide="refresh-cw" width="14"></i></button>
                 </div>
             </div>
             
-            <div class="md:w-64">
+            <div class="lg:w-72 space-y-4">
                 <div class="roast-card p-4 rounded-xl h-64 overflow-hidden relative">
                     <div class="text-[10px] text-[var(--roast-orange)] font-mono mb-2 border-b border-white/10 pb-2">LIVE VICTIMS</div>
-                    <div id="live-feed" class="text-[10px] font-mono text-gray-400 space-y-2"></div>
+                    <div id="live-feed" class="space-y-2"></div>
                 </div>
             </div>
         </div>
 
-        <div class="mt-12">
-            <h3 class="font-pixel text-lg mb-6 text-center text-white">REALITY CHECK</h3>
+        <div class="mt-12 mb-20">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i data-lucide="alert-triangle" class="text-red-500"></i>
+                <h3 class="font-pixel text-lg text-white">REALITY CHECK</h3>
+            </div>
             <div id="roast-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
         </div>
     </div>
 
-    <div id="report-card-modal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4" onclick="this.style.display='none'">
-        <div id="capture-target" class="report-paper" onclick="event.stopPropagation()">
-            <div class="report-header">
-                <div class="flex items-center gap-2">
-                    <img src="12.png" class="w-8 h-8 rounded-full border border-white/20">
-                    <div>
-                        <div class="font-pixel text-[10px] text-[var(--roast-orange)]">ROASTME.FUN</div>
-                        <div class="text-[8px] text-gray-400 font-mono">OFFICIAL REPORT</div>
-                    </div>
-                </div>
-                <div id="card-stamp" class="report-stamp">F</div>
+    <div id="report-card-modal" onclick="closeModal(event)">
+        <div class="flex flex-col items-center gap-4 w-full">
+            <div class="flex gap-2 p-2 bg-black/50 rounded-lg backdrop-blur" onclick="event.stopPropagation()">
+                <button class="style-tab active" onclick="switchCard('standard', this)">CLASSIC</button>
+                <button class="style-tab" onclick="switchCard('receipt', this)">RECEIPT</button>
+                <button class="style-tab" onclick="switchCard('pokemon', this)">TCG</button>
+                <button class="style-tab" onclick="switchCard('wanted', this)">WANTED</button>
+                <button class="style-tab" onclick="switchCard('story', this)">STORY</button>
             </div>
-            <div class="p-6">
-                <div class="flex gap-4 mb-4">
-                    <div class="w-1/2 bg-[#1a2332] rounded p-2 border border-white/5 flex items-center justify-center">
-                         <div class="text-[10px] text-gray-500 text-center">PSYCH PROFILE<br>[Visualizing...]</div>
+            <div id="capture-target" onclick="event.stopPropagation()">
+                <div id="card-standard" class="card-variant active report-paper">
+                    <div class="report-header">
+                        <div class="flex items-center gap-3">
+                            <img src="12.png" class="w-10 h-10 rounded-full border border-orange-500">
+                            <div><div class="font-pixel text-[10px] text-[var(--roast-orange)]">ROASTME.FUN</div><div class="text-[8px] text-gray-500 font-mono">OFFICIAL REPORT</div></div>
+                        </div>
+                        <div id="card-stamp" class="report-stamp">F</div>
                     </div>
-                    <div class="w-1/2 space-y-2">
-                        <div><div class="text-[8px] text-gray-500">ARCHETYPE</div><div id="card-archetype" class="text-xs font-bold text-white">LOADING...</div></div>
-                        <div><div class="text-[8px] text-gray-500">IQ</div><div class="h-1 bg-gray-700 rounded"><div id="stat-iq-bar" class="h-full bg-[var(--roast-orange)]" style="width: 20%"></div></div></div>
+                    <div class="p-6">
+                        <div class="flex gap-4 mb-4">
+                            <div class="w-1/2 bg-[#1a2332] rounded p-2 border border-white/5 flex items-center justify-center"><canvas id="radarCanvas" width="120" height="120"></canvas></div>
+                            <div class="w-1/2 space-y-2">
+                                <div><div class="text-[8px] text-gray-500">ARCHETYPE</div><div id="card-archetype" class="text-xs font-bold text-white">LOADING...</div></div>
+                                <div><div class="text-[8px] text-gray-500">BIGGEST BAG</div><div id="card-bag" class="text-xs font-bold text-blue-400">LOADING...</div></div>
+                            </div>
+                        </div>
+                        <div class="bg-[#1a2332] p-3 rounded border border-white/5"><div class="text-[8px] text-[var(--roast-orange)] font-bold mb-1">CHEF'S COMMENT</div><p id="card-comment" class="font-hand text-xs text-gray-300 italic">...</p></div>
                     </div>
                 </div>
-                <div class="bg-[#1a2332] p-3 rounded border border-white/5 mb-2">
-                    <div class="text-[8px] text-[var(--roast-orange)] font-bold mb-1">CHEF'S COMMENT</div>
-                    <p id="card-comment" class="font-hand text-xs text-gray-300 italic">...</p>
+                <div id="card-receipt" class="card-variant receipt-paper">
+                    <div class="receipt-header"><h3 style="font-size: 16px; font-weight: bold;">ROAST GRILL</h3><div style="font-size: 10px;">ORDER #69</div></div>
+                    <div class="receipt-row"><span>1x BAD TRADE</span><span>-100 pts</span></div>
+                    <div class="receipt-row"><span>BAG HOLDING</span><span>-999 pts</span></div>
+                    <div class="receipt-total"><span>TOTAL LOSS</span><span>ALL</span></div>
+                    <div class="barcode"></div>
+                </div>
+                <div id="card-pokemon" class="card-variant poke-card">
+                    <div class="poke-inner">
+                        <div class="poke-header"><span>DEGEN MON</span><span>HP 10</span></div>
+                        <div class="poke-img-box"><img src="12.png" style="width:60px;"></div>
+                    </div>
+                </div>
+                <div id="card-wanted" class="card-variant wanted-paper">
+                    <div class="wanted-title">WANTED</div>
+                    <div class="wanted-photo"><div style="width:100%; height:100%; background: #000;"></div></div>
+                    <div class="crime-list">CRIMES: LOSING MONEY</div>
+                </div>
+                <div id="card-story" class="card-variant story-paper">
+                    <div class="story-header">ROASTME</div>
+                    <div class="story-body"><div id="story-grade" class="story-grade">?</div></div>
                 </div>
             </div>
+            <button onclick="downloadAndShare()" class="bg-white text-black font-bold px-6 py-3 rounded-full text-xs mt-4">SAVE IMAGE</button>
+        </div>
+    </div>
+
+    <div id="hall-of-fame-modal" onclick="closeHallOfFame(event)" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-4">
+        <div class="bg-[#0f0502] border border-[var(--roast-yellow)] w-full max-w-md rounded-xl overflow-hidden p-4 relative" onclick="event.stopPropagation()">
+            <div class="text-[var(--roast-yellow)] font-bold mb-4 text-center">WHALE LEADERBOARD</div>
+            <table class="w-full text-left"><tbody id="leaderboard-body" class="text-xs text-gray-400"></tbody></table>
         </div>
     </div>
 
     <script>
         lucide.createIcons();
-        const HELIUS_API_KEY = "f7d6a830-5ce4-436e-bd8d-73f75b0f0c52";
-        const RPC_ENDPOINT = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+        const SUPABASE_URL = "https://wnaqmdgndlclchbfbbbp.supabase.co"; const SUPABASE_KEY = "sb_publishable_O4RVXqO_K4U2JG7012h5hQ_aaO6wspz";
+        let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const HELIUS_API_KEY = "f7d6a830-5ce4-436e-bd8d-73f75b0f0c52"; const RPC_ENDPOINT = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
         let connection = new solanaWeb3.Connection(RPC_ENDPOINT, 'confirmed');
-        
-        // Mock Data
-        const ARCHETYPES = { JEET: { name: "THE JEET", grade: "F-", risk: "CRITICAL" }, WHALE: { name: "THE WHALE", grade: "A+", risk: "LOW" }, NPC: { name: "THE NPC", grade: "C", risk: "HIGH" } };
-        const BAD_ROASTS = ["McDonald's is hiring.", "Rugged by a 12yo?", "Exit Liquidity Provider", "Still Broke?"];
 
-        // Live Feed
-        function startLiveFeed() {
-            const feed = document.getElementById('live-feed');
-            setInterval(() => {
-                const item = document.createElement('div');
-                item.innerText = `Wallet ${Math.floor(Math.random()*99)}x... REKT (-99%)`;
-                feed.prepend(item);
-                if(feed.children.length > 5) feed.lastChild.remove();
-            }, 1500);
-        }
-        startLiveFeed();
+        const canvas = document.getElementById('matrix-canvas'); const ctx = canvas.getContext('2d');
+        const emojis = ['🔥', '💸', '📉', '💀'];
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas();
+        const fontSize = 24; let columns = canvas.width / fontSize; const drops = Array(Math.floor(columns)).fill(1);
+        function drawMatrix() { ctx.fillStyle = "rgba(5, 2, 1, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#f97316"; ctx.font = fontSize + "px monospace"; for(let i=0; i<drops.length; i++) { const text = emojis[Math.floor(Math.random() * emojis.length)]; ctx.fillText(text, i*fontSize, drops[i]*fontSize); if(drops[i]*fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++; } }
+        setInterval(drawMatrix, 50);
+
+        const KNOWN_TOKENS = { "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263": "BONK", "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": "WIF" };
+        const ARCHETYPES = { JEET: { name: "THE JEET", grade: "F-", risk: "CRITICAL" }, WHALE: { name: "THE WHALE", grade: "A+", risk: "LOW" }, NPC: { name: "THE NPC", grade: "C", risk: "HIGH" } };
+        let currentProfile = {};
+
+        function handleEnter(e) { if(e.key === "Enter") fetchRealStats(); }
+        function switchCard(style, btn) { document.querySelectorAll('.card-variant').forEach(el => el.classList.remove('active')); document.getElementById(`card-${style}`).classList.add('active'); document.querySelectorAll('.style-tab').forEach(el => el.classList.remove('active')); btn.classList.add('active'); }
+        function openBubbleMap() { const token = currentProfile.bagAddress || "So11111111111111111111111111111111111111112"; window.open(`https://app.bubblemaps.io/sol/token/${token}`, '_blank'); }
 
         async function fetchRealStats() {
-            const wallet = document.getElementById('wallet-input').value;
-            if(wallet.length < 10) return alert("Paste a real wallet address.");
-            
+            const wallet = document.getElementById('wallet-input').value.trim();
+            if(wallet.length < 10) return;
             document.getElementById('loading-ui').classList.remove('hidden');
             
-            // SIMULATED FETCH FOR SPEED/DEMO (Replace with real logic if desired)
-            setTimeout(() => {
-                processLogic(wallet, Math.random() * 10, 50);
-            }, 1500);
+            try {
+                const pubKey = new solanaWeb3.PublicKey(wallet);
+                const bal = await connection.getBalance(pubKey);
+                const solBalance = bal / 1000000000;
+                
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubKey, { programId: new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
+                
+                let topTicker = "SOL"; let topMint = "So11111111111111111111111111111111111111112";
+                tokenAccounts.value.forEach(t => {
+                    const info = t.account.data.parsed.info;
+                    if(info.tokenAmount.uiAmount > 100 && KNOWN_TOKENS[info.mint]) { topTicker = KNOWN_TOKENS[info.mint]; topMint = info.mint; }
+                });
+
+                // Simulate USD fetch
+                const totalUsd = solBalance * 200 + (tokenAccounts.value.length * 50);
+                processLogic(wallet, solBalance, tokenAccounts.value.length, topTicker, topMint, totalUsd);
+
+            } catch (e) { 
+                console.log(e); 
+                // Fallback simulation
+                setTimeout(() => processLogic(wallet, Math.random()*10, 20, "UNKNOWN", "So111...", 500), 1000);
+            }
         }
 
-        function processLogic(wallet, balance, count) {
+        function processLogic(wallet, balance, count, topTicker, topMint, totalUsd) {
             document.getElementById('input-section').style.display = 'none';
-            const res = document.getElementById('results-section');
-            res.style.display = 'block'; // Force block
-            
-            // Logic
-            const type = balance > 5 ? ARCHETYPES.WHALE : ARCHETYPES.JEET;
-            
-            // Update UI
+            document.getElementById('results-section').style.display = 'block'; // Force visible
+            document.getElementById('results-section').classList.add('fade-in');
+
+            const type = balance > 100 ? ARCHETYPES.WHALE : (balance < 1 ? ARCHETYPES.JEET : ARCHETYPES.NPC);
+            currentProfile = { ...type, bag: topTicker, bagAddress: topMint };
+
+            // Save DB
+            supabase.from('leaderboard').insert([{ wallet_address: wallet, balance: balance, grade: type.grade }]).then();
+
+            // UI Updates
             document.getElementById('grade-display').innerText = type.grade;
             document.getElementById('risk-val').innerText = type.risk;
-            document.getElementById('real-balance').innerText = balance.toFixed(2) + " SOL";
+            document.getElementById('real-balance').innerHTML = `${balance.toFixed(2)} ◎ <span class="text-xs text-gray-500">$${totalUsd.toLocaleString()}</span>`;
             document.getElementById('real-token-count').innerText = count;
-            
-            // Update Card
-            document.getElementById('card-stamp').innerText = type.grade;
+
+            // Card Updates
+            document.getElementById('card-wallet-id').innerText = wallet.substring(0,4)+"...";
             document.getElementById('card-archetype').innerText = type.name;
-            document.getElementById('card-comment').innerText = "\"You tried. You failed. Try again.\"";
-            
+            document.getElementById('card-stamp').innerText = type.grade;
+            document.getElementById('card-comment').innerText = `"Your portfolio looks like a crime scene."`;
+            document.getElementById('card-bag').innerText = topTicker;
+            document.getElementById('story-grade').innerText = type.grade;
+
             generateRoastCards();
+            startLiveFeed();
             confetti();
         }
 
         function generateRoastCards() {
             const grid = document.getElementById('roast-grid');
             grid.innerHTML = '';
-            BAD_ROASTS.forEach(roast => {
-                const el = document.createElement('div');
-                el.className = 'wrapped-card theme-dark p-4 rounded text-[10px] flex items-center justify-center text-center h-24 border border-white/10';
-                el.innerText = roast;
-                grid.appendChild(el);
+            ["REKT", "HODL", "NGMI", "WAGMI"].forEach(txt => {
+                const div = document.createElement('div');
+                div.className = 'roast-card p-4 rounded text-center text-xs text-gray-400';
+                div.innerText = txt;
+                grid.appendChild(div);
             });
         }
 
+        function startLiveFeed() {
+            const feed = document.getElementById('live-feed');
+            if(!feed.hasChildNodes()) {
+                setInterval(() => {
+                    const d = document.createElement('div');
+                    d.className = 'live-item';
+                    d.innerText = `Wallet ${Math.floor(Math.random()*99)}x... REKT`;
+                    feed.prepend(d);
+                    if(feed.children.length > 5) feed.lastChild.remove();
+                }, 2000);
+            }
+        }
+
+        function openHallOfFame() {
+            document.getElementById('hall-of-fame-modal').style.display = 'flex';
+            supabase.from('leaderboard').select('*').order('balance', {ascending:false}).limit(5).then(({data}) => {
+                const body = document.getElementById('leaderboard-body');
+                body.innerHTML = '';
+                data.forEach((r, i) => {
+                    body.innerHTML += `<tr class="border-b border-white/10"><td class="p-2">#${i+1}</td><td class="p-2">${r.wallet_address.substring(0,4)}...</td><td class="p-2 text-right">${parseFloat(r.balance).toFixed(2)}</td><td class="p-2 text-center">${r.grade}</td></tr>`;
+                });
+            });
+        }
+        function closeHallOfFame(e) { if(e.target.id === 'hall-of-fame-modal') document.getElementById('hall-of-fame-modal').style.display = 'none'; }
+        
         function openModal() { document.getElementById('report-card-modal').style.display = 'flex'; }
+        function closeModal(e) { if(e.target.id === 'report-card-modal') document.getElementById('report-card-modal').style.display = 'none'; }
+        
+        function downloadAndShare() {
+            const el = document.getElementById('capture-target');
+            html2canvas(el, { scale: 2, backgroundColor: null }).then(canvas => {
+                const link = document.createElement('a'); link.download = 'Roast.png'; link.href = canvas.toDataURL(); link.click();
+            });
+        }
     </script>
 </body>
 </html>
