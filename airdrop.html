@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Airdrop Hunter | RoastMe.fun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        :root {
+            --roast-bg: #050201;
+            --roast-orange: #f97316;
+            --roast-green: #22c55e;
+            --roast-red: #ef4444;
+        }
+
+        body {
+            background-color: var(--roast-bg);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 10%, #1a1a2e 0%, #000 100%);
+            overflow: hidden;
+        }
+
+        /* Player */
+        #player {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 60px;
+            transition: left 0.05s linear;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+            z-index: 10;
+        }
+
+        /* Falling Items */
+        .item {
+            position: absolute;
+            font-size: 40px;
+            z-index: 5;
+        }
+        
+        .dodging {
+            transition: transform 0.2s ease-out;
+        }
+
+        /* UI */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 20px;
+            display: flex; justify-content: space-between; pointer-events: none; z-index: 20;
+        }
+        
+        .stat-box { text-shadow: 2px 2px 0 #000; }
+
+        #patience-bar-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 20px; background: #333; border: 2px solid #fff; border-radius: 10px;
+            overflow: hidden; z-index: 20;
+        }
+        #patience-bar {
+            width: 100%; height: 100%; background: var(--roast-green);
+            transition: width 0.2s linear, background-color 0.5s;
+        }
+
+        /* Screens */
+        #start-screen, #game-over {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95); border: 4px solid var(--roast-orange);
+            padding: 40px; text-align: center; border-radius: 20px; z-index: 50;
+            width: 90%; max-width: 500px;
+        }
+        
+        .btn {
+            background: var(--roast-orange); color: black; border: none;
+            padding: 15px 30px; font-family: inherit; font-size: 14px;
+            margin-top: 20px; cursor: pointer; border-radius: 8px; width: 100%;
+            box-shadow: 0 4px 0 #c2410c; transition: transform 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: none; }
+
+        .hidden { display: none !important; }
+        
+        /* Floating Text Effects */
+        .float-text {
+            position: absolute; color: var(--roast-red); font-size: 12px;
+            animation: floatUp 1s forwards; pointer-events: none; z-index: 15;
+            white-space: nowrap;
+        }
+        @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui-layer">
+            <div class="stat-box text-[10px] text-gray-400">
+                WAITED: <span id="score" class="text-white text-lg">0</span> DAYS
+            </div>
+            <a href="index.html" class="pointer-events-auto bg-white/10 p-2 rounded hover:bg-white/20 transition">
+                <i data-lucide="x" width="20"></i>
+            </a>
+        </div>
+
+        <div id="patience-bar-container">
+            <div id="patience-bar"></div>
+        </div>
+        <div class="absolute bottom-12 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 font-bold tracking-widest z-20">PATIENCE</div>
+
+        <div id="player">🤲</div>
+
+        <div id="start-screen">
+            <h1 class="text-2xl mb-4 text-[var(--roast-orange)]">WHERE AIRDROP?</h1>
+            <p class="text-[10px] text-gray-300 mb-6 leading-6">
+                The devs promised.<br>
+                Catch the 📦 to get rich.<br>
+                Eat 💊 HOPIUM to stay alive.<br>
+                Don't lose patience.
+            </p>
+            <button class="btn" onclick="startGame()">START WAITING</button>
+        </div>
+
+        <div id="game-over" class="hidden">
+            <h1 class="text-2xl mb-4 text-red-500">YOU SOLD.</h1>
+            <p id="death-msg" class="text-[10px] text-gray-300 mb-6 leading-relaxed">
+                "Airdrop confirmed for 2026."
+            </p>
+            <div class="text-xs mb-4">YOU WAITED: <span id="final-score" class="text-[var(--roast-orange)]">0</span> DAYS</div>
+            <button class="btn" onclick="startGame()">WAIT HARDER</button>
+            <button class="btn" style="background:#333; color:white; margin-top:10px; box-shadow:none;" onclick="location.href='index.html'">GIVE UP</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const player = document.getElementById('player');
+        const container = document.getElementById('game-container');
+        const scoreEl = document.getElementById('score');
+        const patienceBar = document.getElementById('patience-bar');
+        
+        let score = 0;
+        let patience = 100;
+        let gameLoop;
+        let spawnLoop;
+        let isPlaying = false;
+        let playerX = 50; // percentage
+        let items = [];
+        
+        // Settings
+        const GAME_SPEED = 5; // Fall speed
+        const SPAWN_RATE = 800; // ms
+        const DECAY_RATE = 0.15; // Patience loss per tick
+
+        // Controls
+        function movePlayer(x) {
+            playerX = x;
+            if(playerX < 5) playerX = 5;
+            if(playerX > 95) playerX = 95;
+            player.style.left = playerX + '%';
+        }
+
+        container.addEventListener('mousemove', (e) => {
+            if(!isPlaying) return;
+            movePlayer((e.clientX / window.innerWidth) * 100);
+        });
+
+        container.addEventListener('touchmove', (e) => {
+            if(!isPlaying) return;
+            movePlayer((e.touches[0].clientX / window.innerWidth) * 100);
+        });
+
+        function spawnItem() {
+            const el = document.createElement('div');
+            el.classList.add('item');
+            
+            // Randomize Item Type
+            const rand = Math.random();
+            let type = 'pill';
+            
+            if(rand > 0.95) { // 5% Chance for Airdrop (The Bait)
+                type = 'airdrop';
+                el.innerText = '📦';
+            } else if(rand > 0.7) { // 25% Chance for Rug
+                type = 'rug';
+                el.innerText = '📉';
+            } else { // 70% Chance for Hopium
+                type = 'pill';
+                el.innerText = '💊';
+            }
+
+            el.dataset.type = type;
+            el.style.left = Math.random() * 90 + 5 + '%';
+            el.style.top = '-50px';
+            container.appendChild(el);
+            items.push({ el, y: -50, type });
+        }
+
+        function showFloatText(x, y, text, color) {
+            const el = document.createElement('div');
+            el.classList.add('float-text');
+            el.innerText = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.color = color;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function update() {
+            if(!isPlaying) return;
+
+            // Patience Decay
+            patience -= DECAY_RATE;
+            patienceBar.style.width = patience + '%';
+            
+            if(patience < 30) patienceBar.style.backgroundColor = '#ef4444';
+            else patienceBar.style.backgroundColor = '#22c55e';
+
+            if(patience <= 0) gameOver();
+
+            // Score (Time Waited)
+            score += 0.05;
+            scoreEl.innerText = Math.floor(score);
+
+            // Update Items
+            const playerRect = player.getBoundingClientRect();
+
+            items.forEach((item, index) => {
+                item.y += GAME_SPEED;
+                
+                // TROLL MECHANIC: If it's an Airdrop, DODGE the player when close
+                if(item.type === 'airdrop' && item.y > window.innerHeight - 300) {
+                    const itemRect = item.el.getBoundingClientRect();
+                    const distX = (itemRect.left + itemRect.width/2) - (playerRect.left + playerRect.width/2);
+                    
+                    // If getting close horizontally
+                    if(Math.abs(distX) < 100) {
+                        // Move away rapidly
+                        const currentLeft = parseFloat(item.el.style.left);
+                        const dodgeDir = distX > 0 ? 5 : -5; // Move right if player is left, etc.
+                        item.el.style.left = (currentLeft + dodgeDir) + '%';
+                        item.el.innerText = "SOON"; // Change visuals
+                        item.el.style.fontSize = "12px";
+                        item.el.classList.add('dodging');
+                    }
+                }
+
+                item.el.style.top = item.y + 'px';
+
+                // Collision Detection
+                const itemRect = item.el.getBoundingClientRect();
+                
+                if(
+                    itemRect.bottom >= playerRect.top + 20 &&
+                    itemRect.top <= playerRect.bottom &&
+                    itemRect.right >= playerRect.left + 20 &&
+                    itemRect.left <= playerRect.right - 20
+                ) {
+                    // Hit!
+                    if(item.type === 'pill') {
+                        patience = Math.min(patience + 15, 100); // Heal
+                        showFloatText(itemRect.left, itemRect.top, "+HOPIUM", "#22c55e");
+                    } else if (item.type === 'rug') {
+                        patience -= 30; // Damage
+                        showFloatText(itemRect.left, itemRect.top, "FUD!", "#ef4444");
+                    } else if (item.type === 'airdrop') {
+                        // Extremely rare case if they somehow catch it
+                        showFloatText(itemRect.left, itemRect.top, "DELAYED!", "#facc15");
+                    }
+
+                    item.el.remove();
+                    items.splice(index, 1);
+                }
+                
+                // Cleanup off-screen
+                if(item.y > window.innerHeight) {
+                    item.el.remove();
+                    items.splice(index, 1);
+                }
+            });
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over').classList.add('hidden');
+            
+            // Reset
+            items.forEach(i => i.el.remove());
+            items = [];
+            score = 0;
+            patience = 100;
+            isPlaying = true;
+            
+            update();
+            spawnLoop = setInterval(spawnItem, SPAWN_RATE);
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(gameLoop);
+            clearInterval(spawnLoop);
+            
+            const roasts = [
+                "Snapshot was taken yesterday.",
+                "You weren't active enough in Discord.",
+                "Dev wallet moved 50% supply.",
+                "Airdrop coming Q5 2025.",
+                "You sold the bottom."
+            ];
+            document.getElementById('death-msg').innerText = `"${roasts[Math.floor(Math.random()*roasts.length)]}"`;
+            document.getElementById('final-score').innerText = Math.floor(score);
+            document.getElementById('game-over').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
