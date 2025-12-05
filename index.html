@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rug Run | RoastMe.fun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        :root {
+            --roast-bg: #0f0502;
+            --roast-orange: #f97316;
+            --roast-red: #ef4444;
+            --roast-green: #22c55e;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--roast-bg);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            touch-action: none; /* Prevent zoom/scroll on mobile */
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, #000 0%, #1a0a05 100%);
+        }
+
+        canvas {
+            box-shadow: 0 0 50px rgba(249, 115, 22, 0.2);
+            border-top: 2px solid var(--roast-orange);
+            border-bottom: 2px solid var(--roast-orange);
+            background: #050201;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .hud-text {
+            color: var(--roast-orange);
+            text-shadow: 2px 2px 0px #000;
+            font-size: 16px;
+        }
+
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 40px;
+            border: 4px solid var(--roast-orange);
+            border-radius: 20px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .btn {
+            background: var(--roast-orange);
+            color: black;
+            border: none;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P';
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.1s;
+            text-transform: uppercase;
+        }
+        .btn:active { transform: scale(0.95); }
+        .hidden { display: none !important; }
+
+        /* CRT Scanline Effect */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui-layer">
+            <div class="flex justify-between w-full max-w-4xl mx-auto">
+                <div class="hud-text">SCORE: <span id="scoreVal">0</span></div>
+                <div class="hud-text" style="color:var(--roast-green)">BAG: <span id="coinVal">0</span> SOL</div>
+            </div>
+        </div>
+
+        <div id="start-screen">
+            <h1 class="text-3xl mb-4 text-[var(--roast-orange)]">RUG RUN</h1>
+            <p class="text-xs text-gray-400 mb-6 leading-6">
+                Dodge the Red Candles 📉<br>
+                Jump over Rug Pulls 🚨<br>
+                Collect SOL ◎
+            </p>
+            <button class="btn" onclick="startGame()">START GRIND</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1 class="text-4xl mb-2 text-red-500">REKT</h1>
+            <p id="death-roast" class="text-xs text-[var(--roast-orange)] mb-6 italic">"Back to McDonald's"</p>
+            <div class="text-sm mb-4">SCORE: <span id="finalScore">0</span></div>
+            <button class="btn" onclick="resetGame()">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // --- AUDIO ENGINE (Simple Synths) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const actx = new AudioContext();
+
+        function beep(freq, type, duration) {
+            if (actx.state === 'suspended') actx.resume();
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, actx.currentTime);
+            gain.gain.setValueAtTime(0.1, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(actx.destination);
+            osc.start();
+            osc.stop(actx.currentTime + duration);
+        }
+
+        function playJump() { beep(300, 'square', 0.1); }
+        function playCoin() { beep(1200, 'sine', 0.1); setTimeout(() => beep(1800, 'sine', 0.1), 50); }
+        function playCrash() { beep(100, 'sawtooth', 0.5); }
+
+        // --- GAME VARIABLES ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameSpeed = 5;
+        let score = 0;
+        let coins = 0;
+        let isRunning = false;
+        let animationId;
+        let frame = 0;
+
+        // Resize Canvas
+        function resize() {
+            canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
+            canvas.height = 400;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- ENTITIES ---
+        
+        const player = {
+            x: 50,
+            y: 300,
+            w: 40,
+            h: 40,
+            dy: 0,
+            jumpPower: -12,
+            gravity: 0.6,
+            grounded: false,
+            emoji: "🍞" // Toaster
+        };
+
+        let obstacles = [];
+        let particles = [];
+        let solanaCoins = [];
+
+        class Obstacle {
+            constructor() {
+                this.w = 30;
+                this.h = 50 + Math.random() * 50; // Random height red candle
+                this.x = canvas.width;
+                this.y = canvas.height - this.h - 50; // Ground level offset
+                this.type = Math.random() > 0.8 ? 'RUG' : 'CANDLE';
+            }
+            
+            draw() {
+                if(this.type === 'CANDLE') {
+                    // Draw Red Candle
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                    // Wick
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(this.x + 14, this.y - 10, 2, 10);
+                    ctx.fillRect(this.x + 14, this.y + this.h, 2, 10);
+                } else {
+                    // Draw Rug (Police Siren / Warning)
+                    ctx.fillStyle = '#111';
+                    ctx.fillRect(this.x, canvas.height - 80, 40, 30);
+                    ctx.font = "20px Arial";
+                    ctx.fillText("🚨", this.x + 5, canvas.height - 55);
+                }
+            }
+
+            update() {
+                this.x -= gameSpeed;
+            }
+        }
+
+        class Coin {
+            constructor() {
+                this.r = 15;
+                this.x = canvas.width;
+                this.y = canvas.height - 150 - Math.random() * 100; // Floating height
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fillStyle = '#9945FF'; // Solana Purple
+                ctx.fill();
+                ctx.strokeStyle = '#14F195'; // Solana Green
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.font = "12px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("◎", this.x, this.y + 4);
+                ctx.closePath();
+            }
+
+            update() {
+                this.x -= gameSpeed;
+            }
+        }
+
+        // --- GAME LOOP ---
+
+        function update() {
+            // Physics
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            // Ground Collision (Ground is at height - 50)
+            if (player.y + player.h > canvas.height - 50) {
+                player.y = canvas.height - 50 - player.h;
+                player.dy = 0;
+                player.grounded = true;
+            } else {
+                player.grounded = false;
+            }
+
+            // Spawn Obstacles
+            if (frame % 100 === 0) {
+                obstacles.push(new Obstacle());
+                // Speed up slightly over time
+                if(gameSpeed < 12) gameSpeed += 0.1;
+            }
+
+            // Spawn Coins
+            if (frame % 140 === 0) {
+                solanaCoins.push(new Coin());
+            }
+
+            // Update Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.update();
+
+                // Collision Detection (Box AABB)
+                if (
+                    player.x < obs.x + (obs.type==='CANDLE' ? obs.w : 40) &&
+                    player.x + player.w > obs.x &&
+                    player.y < (obs.type==='CANDLE' ? obs.y + obs.h : canvas.height - 50) &&
+                    player.y + player.h > (obs.type==='CANDLE' ? obs.y : canvas.height - 80)
+                ) {
+                    gameOver();
+                }
+
+                // Remove off-screen
+                if (obs.x + obs.w < 0) obstacles.splice(i, 1);
+            }
+
+            // Update Coins
+            for (let i = solanaCoins.length - 1; i >= 0; i--) {
+                let coin = solanaCoins[i];
+                coin.update();
+
+                // Coin Collision (Circle/Rect approx)
+                let dx = coin.x - (player.x + player.w/2);
+                let dy = coin.y - (player.y + player.h/2);
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < coin.r + 20) {
+                    coins++;
+                    score += 10; // Bonus score
+                    document.getElementById('coinVal').innerText = coins;
+                    playCoin();
+                    solanaCoins.splice(i, 1);
+                }
+
+                if (coin.x + coin.r < 0) solanaCoins.splice(i, 1);
+            }
+
+            score++;
+            document.getElementById('scoreVal').innerText = Math.floor(score/5);
+            frame++;
+        }
+
+        function draw() {
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Floor
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            ctx.strokeStyle = '#f97316'; // Orange Line
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 50);
+            ctx.lineTo(canvas.width, canvas.height - 50);
+            ctx.stroke();
+
+            // Draw Player (Toaster Emoji)
+            ctx.font = "40px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(player.emoji, player.x, player.y + 35);
+
+            // Draw Obstacles
+            obstacles.forEach(o => o.draw());
+
+            // Draw Coins
+            solanaCoins.forEach(c => c.draw());
+        }
+
+        function loop() {
+            if (!isRunning) return;
+            update();
+            draw();
+            animationId = requestAnimationFrame(loop);
+        }
+
+        // --- CONTROLS ---
+
+        function jump() {
+            if (player.grounded) {
+                player.dy = player.jumpPower;
+                player.grounded = false;
+                playJump();
+            }
+        }
+
+        window.addEventListener('keydown', e => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') jump();
+        });
+
+        window.addEventListener('touchstart', (e) => {
+             e.preventDefault(); // Prevent scroll
+             jump();
+        }, {passive: false});
+        
+        window.addEventListener('mousedown', jump);
+
+
+        // --- STATE MANAGEMENT ---
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            resetVars();
+            isRunning = true;
+            loop();
+        }
+
+        function gameOver() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            playCrash();
+            
+            // Generate Roast
+            const roasts = [
+                "You held the bag too long.",
+                "Liquidation call received.",
+                "Back to McDonald's for you.",
+                "Have fun staying poor.",
+                "Dev sold everything.",
+                "Rugged by a 12 year old."
+            ];
+            const randomRoast = roasts[Math.floor(Math.random() * roasts.length)];
+            
+            document.getElementById('death-roast').innerText = `"${randomRoast}"`;
+            document.getElementById('finalScore').innerText = Math.floor(score/5);
+            document.getElementById('game-over-screen').classList.remove('hidden');
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+        function resetVars() {
+            score = 0;
+            coins = 0;
+            frame = 0;
+            gameSpeed = 5;
+            obstacles = [];
+            solanaCoins = [];
+            player.y = 300;
+            player.dy = 0;
+            document.getElementById('scoreVal').innerText = "0";
+            document.getElementById('coinVal').innerText = "0";
+        }
+
+    </script>
+</body>
+</html> 
