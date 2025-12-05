@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { background: #050201; color: white; font-family: 'Press Start 2P', cursive; text-align: center; overflow: hidden; }
+        body { background: #050201; color: white; font-family: 'Press Start 2P', cursive; text-align: center; overflow: hidden; touch-action: none; }
         
         .game-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
@@ -33,9 +33,24 @@
         .splat { color: #f97316; font-size: 40px; position: absolute; pointer-events: none; animation: fadeUp 0.5s forwards; }
         @keyframes fadeUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
 
-        .btn { background: #f97316; color: black; border: none; padding: 15px 30px; font-family: inherit; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
+        .btn { 
+            background: #f97316; color: black; border: none; 
+            padding: 15px 30px; font-family: inherit; font-size: 14px;
+            margin-top: 20px; cursor: pointer; text-transform: uppercase; 
+            width: 100%; max-width: 300px; border-radius: 8px;
+        }
         
-        #game-over { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+        .btn-exit {
+            background: transparent; color: #666; border: 2px solid #333;
+            margin-top: 15px; font-size: 10px;
+        }
+        .btn-exit:hover { color: white; border-color: white; }
+        
+        #game-over { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); 
+            display: none; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 50; padding: 20px;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -60,14 +75,14 @@
         <div class="hole"><div class="mole">🐳</div></div>
     </div>
 
-    <div class="mt-4 text-xs text-gray-600">CLICK TO SNIPE THE WHALES</div>
+    <div class="mt-4 text-xs text-gray-600">TAP TO SNIPE</div>
 
     <div id="game-over">
         <h1 class="text-3xl text-[var(--roast-orange)] mb-4">TIME'S UP!</h1>
-        <p class="text-sm mb-6">You sniped <span id="final-score" class="text-white">0</span> Whales.</p>
+        <p class="text-sm mb-6 text-gray-300">You sniped <span id="final-score" class="text-white font-bold">0</span> Whales.</p>
+        
         <button class="btn" onclick="location.reload()">HUNT AGAIN</button>
-        <br><br>
-        <a href="arcade.html" class="text-xs text-gray-500 hover:text-white">EXIT TO LOBBY</a>
+        <button class="btn btn-exit" onclick="window.location.href='index.html'">EXIT TO LOBBY</button>
     </div>
 
     <script>
