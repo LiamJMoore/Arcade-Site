@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoastMe Arcade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body { background: #050201; color: white; font-family: 'Press Start 2P', cursive; }
+        .game-card {
+            background: #1c100b; border: 2px solid #33180f; border-radius: 16px;
+            transition: all 0.2s; cursor: pointer; overflow: hidden; position: relative;
+        }
+        .game-card:hover { border-color: #f97316; transform: translateY(-5px); box-shadow: 0 0 20px rgba(249, 115, 22, 0.2); }
+        .play-btn { background: #f97316; color: black; padding: 10px; width: 100%; text-align: center; display: block; margin-top: 10px; }
+    </style>
+</head>
+<body class="p-8 max-w-4xl mx-auto">
+
+    <nav class="flex justify-between items-center mb-12">
+        <div class="text-[#f97316] text-xl">ROASTME<span class="text-white text-xs">.FUN</span></div>
+        <a href="index.html" class="text-xs text-gray-400 hover:text-white flex items-center gap-2"><i data-lucide="arrow-left" width="12"></i> BACK TO SCANNER</a>
+    </nav>
+
+    <h1 class="text-4xl mb-2 text-center">DEGEN ARCADE</h1>
+    <p class="text-center text-gray-500 text-xs mb-12">Play while your portfolio dumps.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <a href="game.html" class="game-card p-6">
+            <div class="text-4xl mb-4 text-center">🍞</div>
+            <h3 class="text-lg text-[#f97316] mb-2 text-center">RUG RUN</h3>
+            <p class="text-[10px] text-gray-400 text-center leading-5 mb-4">Endless runner. Dodge the red candles and collect SOL.</p>
+            <div class="play-btn">PLAY NOW</div>
+        </a>
+
+        <a href="shooter.html" class="game-card p-6">
+            <div class="text-4xl mb-4 text-center">🚀</div>
+            <h3 class="text-lg text-[#f97316] mb-2 text-center">JEET SHOOTER</h3>
+            <p class="text-[10px] text-gray-400 text-center leading-5 mb-4">Space Invaders style. Blast the FUD and Jeets.</p>
+            <div class="play-btn">PLAY NOW</div>
+        </a>
+
+        <a href="whale.html" class="game-card p-6">
+            <div class="text-4xl mb-4 text-center">🐳</div>
+            <h3 class="text-lg text-[#f97316] mb-2 text-center">WHALE HUNTER</h3>
+            <p class="text-[10px] text-gray-400 text-center leading-5 mb-4">Whack-a-Mole style. Snipe the whales before they dump.</p>
+            <div class="play-btn">PLAY NOW</div>
+        </a>
+
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>
