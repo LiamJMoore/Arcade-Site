@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pepe Jump | DEGENGAMES.FUN</title>
+    <title>Pepe Jump Deluxe | DEGENGAMES.FUN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="icon" href="12.png" type="image/png">
@@ -24,7 +24,6 @@
             position: relative;
             width: 100vw; height: 100vh;
             overflow: hidden;
-            /* Space Background */
             background: radial-gradient(circle at bottom, #1e3a8a 0%, #000 70%);
         }
 
@@ -78,31 +77,34 @@
         <div id="ui-layer">
             <div class="flex justify-between w-full items-start">
                 <a href="index.html" class="nav-btn"><i data-lucide="arrow-left" width="20"></i></a>
-                <div class="text-right text-white drop-shadow-md bg-black/40 p-3 rounded border border-green-600/50">
-                    <div class="text-sm text-green-400 mb-1">HEIGHT: <span id="scoreVal">0</span>m</div>
+                <div class="text-right">
+                    <div class="text-white drop-shadow-md bg-black/40 p-3 rounded border border-green-600/50">
+                        <div class="text-sm text-green-400 mb-1">HEIGHT: <span id="scoreVal">0</span>m</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="start-screen">
-            <div class="w-32 h-32 mx-auto mb-6 border-4 border-green-600 overflow-hidden rounded-lg shadow-lg bg-black flex items-center justify-center">
+            <div class="w-24 h-24 mx-auto mb-6 border-4 border-green-600 overflow-hidden rounded-lg shadow-lg bg-black flex items-center justify-center">
                 <img src="12.png" class="w-full h-full object-contain">
             </div>
             <h1 class="text-xl mb-4 text-green-500 leading-tight">PEPE JUMP</h1>
-            <p class="text-[10px] text-gray-300 mb-6 leading-6">
-                Jump on Green Candles 🕯️<br>
-                Avoid Red Dumps 📉<br>
-                Reach the Moon 🌕<br><br>
-                [ARROWS/TILT] Move Left/Right
+            <p class="text-[10px] text-gray-300 mb-6 leading-6 text-left mx-auto max-w-xs">
+                <span class="text-green-400">🟩 GREEN:</span> Safe<br>
+                <span class="text-blue-400">🟦 BLUE:</span> Moving<br>
+                <span class="text-red-500">🟥 RED:</span> Rug Pull (Don't Land!)<br>
+                <span class="text-yellow-400">🚀 ROCKET:</span> Moonshot<br>
+                <span class="text-gray-400">🐻 BEARS:</span> Deadly
             </p>
             <button class="btn" onclick="startGame()">PUMP IT</button>
         </div>
 
         <div id="game-over-screen" class="hidden">
-            <h1 class="text-2xl mb-4 text-red-500">FELLS OFF</h1>
-            <p class="text-[10px] text-gray-400 mb-6">"Feels bad man."</p>
-            <div class="text-sm mb-4 text-green-400">MAX HEIGHT: <span id="finalScore">0</span>m</div>
-            <button class="btn" onclick="startGame()">RETRY</button>
+            <h1 class="text-2xl mb-4 text-red-500">LIQUIDATED</h1>
+            <p id="death-reason" class="text-[10px] text-gray-400 mb-6">"You missed the pump."</p>
+            <div class="text-sm mb-4 text-green-400">ATH: <span id="finalScore">0</span>m</div>
+            <button class="btn" onclick="startGame()">REVENGE TRADE</button>
             <button class="btn" style="background:transparent; border:2px solid #666; color:#aaa; box-shadow:none; margin-top:10px; font-size:10px;" onclick="window.location.href='index.html'">GIVE UP</button>
         </div>
         
@@ -117,8 +119,7 @@
         const ctx = canvas.getContext('2d');
 
         // ASSETS
-        const playerImg = new Image();
-        playerImg.src = '12.png'; // Corrected Image Path
+        const playerImg = new Image(); playerImg.src = '12.png'; 
 
         function resize() {
             canvas.width = window.innerWidth > 600 ? 600 : window.innerWidth;
@@ -134,17 +135,18 @@
         
         // ENTITIES
         const player = {
-            x: canvas.width / 2,
-            y: canvas.height - 150,
-            w: 50,
-            h: 50,
-            vx: 0,
-            vy: 0,
-            jumpPower: -12,
-            gravity: 0.4
+            x: canvas.width / 2, y: canvas.height - 150,
+            w: 50, h: 50,
+            vx: 0, vy: 0,
+            jumpPower: -13,
+            gravity: 0.4,
+            boost: false
         };
 
         let platforms = [];
+        let enemies = [];
+        let powerups = [];
+        let particles = [];
         let cameraY = 0;
 
         // CONTROLS
@@ -152,36 +154,60 @@
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Mobile Gyro/Touch logic
         let touchLeft = false;
         let touchRight = false;
-        
         document.getElementById('left-zone').addEventListener('touchstart', e => { e.preventDefault(); touchLeft = true; });
         document.getElementById('left-zone').addEventListener('touchend', e => { e.preventDefault(); touchLeft = false; });
         document.getElementById('right-zone').addEventListener('touchstart', e => { e.preventDefault(); touchRight = true; });
         document.getElementById('right-zone').addEventListener('touchend', e => { e.preventDefault(); touchRight = false; });
 
-        function initPlatforms() {
-            platforms = [];
-            let y = canvas.height;
-            while (y > -50000) { // Infinite generation logic simplified
+        function initLevel() {
+            platforms = []; enemies = []; powerups = [];
+            // Base
+            platforms.push({ x: 0, y: canvas.height - 20, w: canvas.width, h: 20, type: 'GREEN', vx: 0 });
+            
+            let y = canvas.height - 100;
+            while (y > -50000) {
                 const x = Math.random() * (canvas.width - 60);
-                const type = Math.random() > 0.9 ? 'RED' : 'GREEN'; // 10% chance of bad platform
-                platforms.push({ x, y, w: 60, h: 15, type });
-                y -= 100; // Gap
+                
+                // Platform Types
+                let type = 'GREEN';
+                let vx = 0;
+                const r = Math.random();
+                
+                if (r > 0.95) type = 'RED'; // Rug (Breakable)
+                else if (r > 0.8) { type = 'BLUE'; vx = 2; } // Moving
+                
+                platforms.push({ x, y, w: 70, h: 15, type, vx });
+
+                // Add Enemies
+                if (Math.random() > 0.95 && y < canvas.height - 500) {
+                    enemies.push({ x: Math.random() * (canvas.width - 40), y: y - 40, w: 40, h: 40, type: Math.random() > 0.5 ? '🐻' : '👮‍♂️', vx: 1.5 });
+                }
+
+                // Add Powerups
+                if (Math.random() > 0.98) {
+                    powerups.push({ x: x + 20, y: y - 40, w: 30, h: 30, type: '🚀' });
+                }
+
+                y -= 90 + Math.random() * 20; // Gap
             }
-            // Base platform
-            platforms.push({ x: 0, y: canvas.height - 20, w: canvas.width, h: 20, type: 'GREEN' });
+        }
+
+        function createParticles(x, y, color) {
+            for(let i=0; i<8; i++) {
+                particles.push({ x, y, vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8, life: 1, color });
+            }
         }
 
         // GAME LOOP
         function update() {
             if(!isPlaying) return;
 
-            // Horizontal Move
-            if (keys['ArrowLeft'] || touchLeft) player.vx = -6;
-            else if (keys['ArrowRight'] || touchRight) player.vx = 6;
-            else player.vx *= 0.9; // Friction
+            // Player Move
+            if (keys['ArrowLeft'] || touchLeft) player.vx = -7;
+            else if (keys['ArrowRight'] || touchRight) player.vx = 7;
+            else player.vx *= 0.9;
 
             player.x += player.vx;
             
@@ -193,109 +219,158 @@
             player.vy += player.gravity;
             player.y += player.vy;
 
-            // Camera Follow (Only goes up)
+            // Camera
             if (player.y < canvas.height / 2) {
                 const diff = (canvas.height / 2) - player.y;
                 player.y = canvas.height / 2;
                 score += Math.floor(diff);
                 
-                platforms.forEach(p => {
-                    p.y += diff;
-                    // Recycle platforms logic could go here for true infinite
-                });
+                platforms.forEach(p => p.y += diff);
+                enemies.forEach(e => e.y += diff);
+                powerups.forEach(p => p.y += diff);
             }
 
-            // Platform Collision
-            if (player.vy > 0) { // Only when falling
-                platforms.forEach(p => {
-                    if (
-                        player.x + player.w > p.x &&
-                        player.x < p.x + p.w &&
-                        player.y + player.h > p.y &&
-                        player.y + player.h < p.y + p.h + 10 // Threshold
-                    ) {
-                        if (p.type === 'GREEN') {
-                            player.vy = player.jumpPower;
-                            createParticles(player.x + player.w/2, player.y + player.h, '#22c55e');
-                        } else if (p.type === 'RED') {
-                            // Break platform or penalize? Let's make it "Break" (fall through)
-                            // Or bounce barely
-                        }
+            // Platforms Logic
+            platforms.forEach((p, i) => {
+                // Moving Platforms
+                if (p.type === 'BLUE') {
+                    p.x += p.vx;
+                    if (p.x < 0 || p.x + p.w > canvas.width) p.vx *= -1;
+                }
+
+                // Collision
+                if (player.vy > 0 && 
+                    player.x + player.w > p.x && player.x < p.x + p.w &&
+                    player.y + player.h > p.y && player.y + player.h < p.y + p.h + 20) {
+                    
+                    if (p.type === 'RED') {
+                        // Rug Pull!
+                        createParticles(p.x + p.w/2, p.y, '#ef4444');
+                        platforms.splice(i, 1); // Break platform
+                        // Player keeps falling
+                    } else {
+                        player.vy = player.jumpPower;
+                        player.boost = false; // Reset boost
+                        createParticles(player.x + player.w/2, player.y + player.h, '#22c55e');
                     }
-                });
+                }
+            });
+
+            // Enemies
+            enemies.forEach(e => {
+                e.x += e.vx;
+                if (e.x < 0 || e.x + e.w > canvas.width) e.vx *= -1;
+
+                // Hit Enemy
+                if (!player.boost && 
+                    player.x < e.x + e.w && player.x + player.w > e.x &&
+                    player.y < e.y + e.h && player.y + player.h > e.y) {
+                    gameOver("Hit by Bear Market");
+                }
+            });
+
+            // Powerups
+            powerups.forEach((p, i) => {
+                if (player.x < p.x + p.w && player.x + player.w > p.x &&
+                    player.y < p.y + p.h && player.y + player.h > p.y) {
+                    
+                    if(p.type === '🚀') {
+                        player.vy = -30; // SUPER JUMP
+                        player.boost = true;
+                        createParticles(player.x, player.y, '#facc15');
+                    }
+                    powerups.splice(i, 1);
+                }
+            });
+
+            // Particles
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                if(p.life <= 0) particles.splice(i, 1);
             }
 
             // Death
-            if (player.y > canvas.height) {
-                gameOver();
-            }
+            if (player.y > canvas.height) gameOver("You fell off the chart.");
 
-            // Update UI
+            // Cleanup off-screen
+            platforms = platforms.filter(p => p.y < canvas.height + 100);
+            enemies = enemies.filter(e => e.y < canvas.height + 100);
+
             document.getElementById('scoreVal').innerText = score;
 
             draw();
             animationId = requestAnimationFrame(update);
         }
 
-        let particles = [];
-        function createParticles(x, y, color) {
-            for(let i=0; i<5; i++) {
-                particles.push({x, y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 1, color});
-            }
-        }
-
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Stars
+            // Stars
             ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            for(let i=0; i<10; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1);
+            for(let i=0; i<5; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1);
 
             // Platforms
             platforms.forEach(p => {
-                if (p.y > canvas.height) return; // Optimization
+                if(p.type === 'GREEN') ctx.fillStyle = '#22c55e';
+                else if(p.type === 'BLUE') ctx.fillStyle = '#3b82f6';
+                else ctx.fillStyle = '#ef4444';
                 
-                ctx.fillStyle = p.type === 'GREEN' ? '#22c55e' : '#ef4444';
-                // Neon Glow
+                // Neon glow
                 ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
                 ctx.fillRect(p.x, p.y, p.w, p.h);
                 ctx.shadowBlur = 0;
             });
 
+            // Enemies
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center";
+            enemies.forEach(e => ctx.fillText(e.type, e.x + e.w/2, e.y + e.h/2 + 10));
+
+            // Powerups
+            powerups.forEach(p => ctx.fillText(p.type, p.x + p.w/2, p.y + p.h/2 + 10));
+
             // Player
+            ctx.save();
+            ctx.translate(player.x + player.w/2, player.y + player.h/2);
+            if (player.vx < 0) ctx.scale(-1, 1); // Flip if moving left
+            
             if(playerImg.complete) {
-                ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+                ctx.drawImage(playerImg, -player.w/2, -player.h/2, player.w, player.h);
             } else {
                 ctx.fillStyle = '#4ade80';
-                ctx.fillRect(player.x, player.y, player.w, player.h);
+                ctx.fillRect(-player.w/2, -player.h/2, player.w, player.h);
             }
+            
+            // Rocket Flame
+            if(player.boost) {
+                ctx.font = "20px Arial";
+                ctx.fillText("🔥", 0, 35);
+            }
+            ctx.restore();
 
             // Particles
-            for(let i=particles.length-1; i>=0; i--) {
-                let p = particles[i];
-                p.x += p.vx; p.y += p.vy; p.life -= 0.1;
+            particles.forEach(p => {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
                 ctx.fillRect(p.x, p.y, 4, 4);
                 ctx.globalAlpha = 1.0;
-                if(p.life <= 0) particles.splice(i, 1);
-            }
+            });
         }
 
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-over-screen').classList.add('hidden');
             score = 0;
-            player.y = canvas.height - 150;
-            player.vy = -10;
-            initPlatforms();
+            initLevel();
             isPlaying = true;
             update();
         }
 
-        function gameOver() {
+        function gameOver(reason) {
             isPlaying = false;
             cancelAnimationFrame(animationId);
+            document.getElementById('death-reason').innerText = `"${reason}"`;
             document.getElementById('finalScore').innerText = score;
             document.getElementById('game-over-screen').classList.remove('hidden');
         }
