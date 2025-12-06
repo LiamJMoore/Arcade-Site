@@ -24,13 +24,36 @@
             position: relative;
             width: 100vw; height: 100vh;
             overflow: hidden;
-            /* Warzone Sky Gradient */
-            background: linear-gradient(to bottom, #607890 0%, #8fa3ad 40%, #c4b598 80%, #5a4a3a 100%);
+            /* Jungle/Warzone Sky Gradient */
+            background: linear-gradient(to bottom, #38bdf8 0%, #7dd3fc 50%, #15803d 90%, #14532d 100%);
+        }
+
+        /* Moving Background Layers */
+        .bg-layer {
+            position: absolute; top: 0; left: 0; width: 200%; height: 100%;
+            background-repeat: repeat-x; background-size: auto 100%;
+            z-index: 0;
+        }
+        
+        #bg-clouds {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200"><path d="M100,100 Q150,50 200,100 T300,100" fill="none" stroke="white" stroke-width="5" opacity="0.3"/><circle cx="600" cy="80" r="40" fill="white" opacity="0.2"/></svg>');
+            animation: scroll 60s linear infinite;
+        }
+
+        #bg-trees {
+            bottom: 0; height: 25%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M50,0 L100,100 L0,100 Z" fill="%23166534" /></svg>');
+            background-size: 100px 100%;
+            animation: scroll 15s linear infinite;
+            z-index: 1;
+            opacity: 0.8;
         }
 
         canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
         }
+
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
         /* UI */
         #ui-layer {
@@ -41,21 +64,21 @@
 
         .nav-btn {
             pointer-events: auto; background: rgba(0,0,0,0.5);
-            padding: 10px; border-radius: 8px; border: 2px solid #fbbf24; color: #fbbf24;
+            padding: 10px; border-radius: 8px; border: 2px solid #22c55e; color: #22c55e;
             transition: all 0.2s;
         }
-        .nav-btn:hover { background: #fbbf24; color: black; }
+        .nav-btn:hover { background: #22c55e; color: black; }
 
         #start-screen, #game-over-screen {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; background: rgba(20, 15, 10, 0.95);
-            padding: 40px; border: 4px solid #fbbf24; border-radius: 12px;
+            text-align: center; background: rgba(20, 35, 20, 0.95);
+            padding: 40px; border: 4px solid #22c55e; border-radius: 12px;
             pointer-events: auto; z-index: 60; width: 90%; max-width: 500px;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
 
         .btn {
-            background: #fbbf24; color: black; border: 4px solid #b45309;
+            background: #22c55e; color: black; border: 4px solid #15803d;
             padding: 15px 30px; font-family: 'Press Start 2P'; font-size: 14px;
             cursor: pointer; margin-top: 20px; width: 100%;
             text-transform: uppercase; font-weight: bold;
@@ -73,36 +96,40 @@
 <body>
 
     <div id="game-container">
+        <div id="bg-clouds" class="bg-layer"></div>
+        <div id="bg-trees" class="bg-layer"></div>
+
         <canvas id="gameCanvas"></canvas>
 
         <div id="ui-layer">
             <div class="flex justify-between w-full items-start">
                 <a href="index.html" class="nav-btn"><i data-lucide="arrow-left" width="20"></i></a>
-                <div class="text-right text-white drop-shadow-md bg-black/40 p-3 rounded border border-yellow-600/50">
-                    <div class="text-sm text-yellow-400 mb-1">KILLS: <span id="scoreVal">0</span></div>
+                <div class="text-right text-white drop-shadow-md bg-black/40 p-3 rounded border border-green-600/50">
+                    <div class="text-sm text-green-400 mb-1">KILLS: <span id="scoreVal">0</span></div>
                     <div class="text-[10px] text-gray-400">WAVE: <span id="waveVal">1</span></div>
                 </div>
             </div>
         </div>
 
         <div id="start-screen">
-            <div class="w-32 h-32 mx-auto mb-6 border-4 border-yellow-600 overflow-hidden rounded-lg shadow-lg bg-black flex items-center justify-center">
+            <div class="w-32 h-32 mx-auto mb-6 border-4 border-green-600 overflow-hidden rounded-lg shadow-lg bg-black flex items-center justify-center">
                 <img src="image_514803.png" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-                <div style="display:none; font-size: 4rem;">🚁</div>
+                <div style="display:none; font-size: 4rem;">🐢</div>
             </div>
-            <h1 class="text-xl mb-4 text-yellow-500 leading-tight" style="text-shadow: 2px 2px 0 #000;">FRANKLIN'S WAR</h1>
-            <p class="text-[10px] text-gray-400 mb-6 leading-6">
-                Enemy: Narco Bears 🐻<br>
-                Mission: Clear the Skies.<br><br>
+            <h1 class="text-xl mb-4 text-green-500 leading-tight" style="text-shadow: 2px 2px 0 #000;">FRANKLIN'S WAR</h1>
+            <p class="text-[10px] text-gray-300 mb-6 leading-6">
+                Hero: Franklin 🐢<br>
+                Target: Narco Bears 🐻<br>
+                Mission: Secure the Bag.<br><br>
                 [ARROWS] Move • [SPACE] Fire
             </p>
-            <button class="btn" onclick="startGame()">DEPLOY</button>
+            <button class="btn" onclick="startGame()">DEPLOY TURTLE</button>
         </div>
 
         <div id="game-over-screen" class="hidden">
-            <h1 class="text-2xl mb-4 text-red-500">KILLED IN ACTION</h1>
-            <p class="text-[10px] text-gray-400 mb-6">"The Cartel won this round."</p>
-            <div class="text-sm mb-4 text-yellow-400">TOTAL KILLS: <span id="finalScore">0</span></div>
+            <h1 class="text-2xl mb-4 text-red-500">MIA</h1>
+            <p class="text-[10px] text-gray-400 mb-6">"Franklin didn't make it."</p>
+            <div class="text-sm mb-4 text-green-400">CONFIRMED KILLS: <span id="finalScore">0</span></div>
             <button class="btn" onclick="startGame()">RE-DEPLOY</button>
             <button class="btn" style="background:transparent; border:2px solid #666; color:#aaa; box-shadow:none; margin-top:10px; font-size:10px;" onclick="window.location.href='index.html'">ABORT MISSION</button>
         </div>
@@ -119,7 +146,7 @@
 
         // ASSETS
         const playerImg = new Image();
-        playerImg.src = 'image_514803.png'; 
+        playerImg.src = 'image_514803.png'; // Franklin in Heli
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -139,8 +166,8 @@
         const player = {
             x: 50,
             y: canvas.height / 2,
-            w: 70,
-            h: 70,
+            w: 80,
+            h: 80,
             speed: 7,
             cooldown: 0
         };
@@ -148,7 +175,6 @@
         let bullets = [];
         let enemies = [];
         let explosions = [];
-        let clouds = [];
 
         // CONTROLS
         const keys = {};
@@ -174,7 +200,7 @@
             
             bullets.push({ 
                 x: player.x + player.w - 10, 
-                y: player.y + player.h/2, 
+                y: player.y + player.h/2 + 5, 
                 w: 20, h: 6, speed: 15, color: '#facc15' 
             });
             player.cooldown = 8;
@@ -194,22 +220,21 @@
             });
         }
 
-        function spawnCloud() {
-            clouds.push({
-                x: canvas.width,
-                y: Math.random() * (canvas.height/2),
-                w: 100 + Math.random()*100,
-                h: 40 + Math.random()*30,
-                speed: 1 + Math.random()
-            });
-        }
-
         function createExplosion(x, y) {
-            explosions.push({ x: x, y: y, radius: 5, alpha: 1 });
+            for(let i=0; i<10; i++) {
+                explosions.push({
+                    x: x, y: y,
+                    vx: (Math.random()-0.5)*10,
+                    vy: (Math.random()-0.5)*10,
+                    life: 1.0, color: '#f97316'
+                });
+            }
         }
 
         // GAME LOOP
         function update() {
+            if(!isPlaying) return;
+
             // Player
             if (keys['ArrowUp']) player.y -= player.speed;
             if (keys['ArrowDown']) player.y += player.speed;
@@ -226,7 +251,6 @@
 
             // Spawns
             if (frame % Math.max(30, 80 - (wave * 5)) === 0) spawnEnemy();
-            if (frame % 200 === 0) spawnCloud();
 
             // Enemies
             for (let i = enemies.length - 1; i >= 0; i--) {
@@ -260,18 +284,11 @@
                 if (e.x + e.w < 0) enemies.splice(i, 1);
             }
 
-            // Clouds
-            for (let i = clouds.length - 1; i >= 0; i--) {
-                clouds[i].x -= clouds[i].speed;
-                if(clouds[i].x + clouds[i].w < 0) clouds.splice(i, 1);
-            }
-
             // Explosions
             for (let i = explosions.length - 1; i >= 0; i--) {
-                let ex = explosions[i];
-                ex.radius += 2;
-                ex.alpha -= 0.05;
-                if(ex.alpha <= 0) explosions.splice(i, 1);
+                let p = explosions[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                if(p.life <= 0) explosions.splice(i, 1);
             }
 
             if (score > wave * 10) wave++;
@@ -281,27 +298,23 @@
 
             draw();
             frame++;
-            if(isPlaying) animationId = requestAnimationFrame(update);
+            animationId = requestAnimationFrame(update);
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Clouds (Background)
-            ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            clouds.forEach(c => {
-                ctx.beginPath(); ctx.ellipse(c.x, c.y, c.w/2, c.h/2, 0, 0, Math.PI*2); ctx.fill();
-            });
-
             // Draw Player
             if(playerImg.complete && playerImg.naturalWidth > 0) {
                 ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
             } else {
-                // Fallback Shape (Green Heli)
-                ctx.fillStyle = '#22c55e';
-                ctx.fillRect(player.x, player.y + 10, player.w, 30);
-                ctx.fillStyle = '#fbbf24'; // Rotor
-                ctx.fillRect(player.x, player.y, player.w + 20, 5);
+                // Fallback: Turtle + Heli Emoji Combo
+                ctx.font = "60px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("🚁", player.x + player.w/2, player.y + player.h/2);
+                ctx.font = "30px Arial";
+                ctx.fillText("🐢", player.x + player.w/2 + 5, player.y + player.h/2 + 5);
             }
 
             // Draw Bullets
@@ -317,11 +330,11 @@
             });
 
             // Draw Explosions
-            explosions.forEach(ex => {
-                ctx.fillStyle = `rgba(255, 69, 0, ${ex.alpha})`;
-                ctx.beginPath();
-                ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI*2);
-                ctx.fill();
+            explosions.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1.0;
             });
         }
 
@@ -340,10 +353,6 @@
             document.getElementById('finalScore').innerText = score;
             document.getElementById('game-over-screen').classList.remove('hidden');
         }
-
-        // Initial Draw (Background)
-        resize();
-        draw();
 
     </script>
 </body>
