@@ -43,9 +43,10 @@
             border-top: 4px solid var(--pump-green);
             border-bottom: 4px solid var(--pump-green);
             background: rgba(0,0,0,0.8);
+            /* MOBILE RESPONSIVENESS FIX */
             width: 100%;
             max-width: 800px;
-            height: 400px;
+            aspect-ratio: 2/1; /* Maintain aspect ratio */
             image-rendering: pixelated;
         }
 
@@ -77,20 +78,21 @@
             transform: translate(-50%, -50%);
             text-align: center;
             background: rgba(16, 20, 31, 0.95);
-            padding: 40px;
+            padding: 30px;
             border: 4px solid var(--pump-green);
             border-radius: 12px;
             pointer-events: auto;
             z-index: 40;
             box-shadow: 0 0 30px rgba(134, 239, 172, 0.3);
-            min-width: 300px;
+            width: 90%; /* Fit mobile width */
+            max-width: 400px;
         }
 
         .btn {
             background: var(--pump-green);
             color: black;
             border: none;
-            padding: 15px 30px;
+            padding: 15px 20px;
             font-family: 'Press Start 2P';
             font-size: 12px;
             cursor: pointer;
@@ -98,9 +100,9 @@
             transition: all 0.1s;
             text-transform: uppercase;
             box-shadow: 4px 4px 0px #000;
+            width: 100%;
         }
         .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px #000; }
-        .btn:hover { filter: brightness(1.1); }
         
         .btn-exit {
             background: transparent;
@@ -109,7 +111,7 @@
             box-shadow: none;
             margin-top: 10px;
             font-size: 10px;
-            padding: 10px;
+            padding: 12px;
         }
         .btn-exit:hover { color: white; border-color: white; }
 
@@ -117,13 +119,13 @@
 
         /* Navigation */
         .nav-bar {
-            position: absolute; top: 20px; left: 20px; z-index: 50;
+            position: absolute; top: 20px; left: 20px; z-index: 50; pointer-events: auto;
         }
         .back-link {
             font-size: 10px; color: #666; text-decoration: none;
             display: flex; align-items: center; gap: 8px;
             transition: color 0.2s;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.8);
             padding: 8px 12px;
             border-radius: 8px;
             border: 1px solid #333;
@@ -153,14 +155,14 @@
         
         <div class="nav-bar">
             <a href="index.html" class="back-link">
-                <i data-lucide="arrow-left" width="14"></i> BACK TO LOBBY
+                <i data-lucide="arrow-left" width="14"></i> LOBBY
             </a>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
         
         <div id="ui-layer">
-            <div class="flex justify-between w-full max-w-[800px] mx-auto mt-2">
+            <div class="flex justify-between w-full max-w-[800px] mx-auto mt-2 px-4">
                 <div class="text-[var(--pump-green)] text-xs">PUMP: <span id="scoreVal">0</span>%</div>
                 <div class="text-white text-xs">BAG: <span id="coinVal" class="text-[var(--pump-green)]">0</span> SOL</div>
             </div>
@@ -173,13 +175,13 @@
                 Avoid Red Candles 📉<br>
                 Jump over Rugs 🚨<br>
                 Pump the Chart 📈<br><br>
-                [SPACE] or [TAP] to Jump
+                [TAP SCREEN] to Jump
             </p>
             <button class="btn" onclick="startGame()">ENTER THE TRENCHES</button>
         </div>
 
         <div id="game-over-screen" class="hidden">
-            <h1 class="text-3xl mb-2 text-red-500 glitch">RUGGED</h1>
+            <h1 class="text-3xl mb-2 text-red-500">RUGGED</h1>
             <p id="death-roast" class="text-[10px] text-gray-300 mb-6 italic">"Dev sold everything."</p>
             <div class="text-sm mb-4">PUMPED: <span id="finalScore" class="text-[var(--pump-green)]">0</span>%</div>
             <button class="btn" onclick="resetGame()">BUY THE DIP</button>
@@ -223,10 +225,6 @@
         let animationId;
         let frame = 0;
 
-        // Force fixed aspect ratio for fairness, scale via CSS
-        canvas.width = 800;
-        canvas.height = 400;
-
         // --- ENTITIES ---
         
         const player = {
@@ -245,54 +243,30 @@
         let particles = [];
         let solanaCoins = [];
 
-        // DRAW PILL CHARACTER (PUMP FUN STYLE)
+        // DRAW PILL CHARACTER
         function drawPlayer(x, y, w, h, rot) {
             ctx.save();
             ctx.translate(x + w/2, y + h/2);
-            // Jump rotation effect
             if(!player.grounded) {
                 player.rotation += 0.1;
             } else {
-                // Snap back to 0 or PI
                 player.rotation = Math.round(player.rotation / Math.PI) * Math.PI;
             }
             ctx.rotate(player.rotation);
 
-            // Pill Body
-            // Top Half (Green)
+            // Pill Body (Green/White)
             ctx.fillStyle = '#86efac';
-            ctx.beginPath();
-            ctx.arc(0, -10, 18, Math.PI, 0);
-            ctx.lineTo(18, 0);
-            ctx.lineTo(-18, 0);
-            ctx.fill();
-
-            // Bottom Half (White)
+            ctx.beginPath(); ctx.arc(0, -10, 18, Math.PI, 0); ctx.lineTo(18, 0); ctx.lineTo(-18, 0); ctx.fill();
             ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(0, 10, 18, 0, Math.PI);
-            ctx.lineTo(-18, 0);
-            ctx.lineTo(18, 0);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 10, 18, 0, Math.PI); ctx.lineTo(-18, 0); ctx.lineTo(18, 0); ctx.fill();
             
             // Border
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.roundRect(-18, -28, 36, 56, 18);
-            ctx.stroke();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-18, -28, 36, 56, 18); ctx.stroke();
 
-            // Face (Kawaii style)
+            // Face
             ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.arc(-6, -2, 2, 0, Math.PI*2); // Left Eye
-            ctx.arc(6, -2, 2, 0, Math.PI*2); // Right Eye
-            ctx.fill();
-            
-            // Smile
-            ctx.beginPath();
-            ctx.arc(0, 0, 4, 0, Math.PI);
-            ctx.stroke();
+            ctx.beginPath(); ctx.arc(-6, -2, 2, 0, Math.PI*2); ctx.arc(6, -2, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI); ctx.stroke();
 
             ctx.restore();
         }
@@ -300,117 +274,56 @@
         class Obstacle {
             constructor() {
                 this.w = 30;
-                this.h = 60 + Math.random() * 60; // Candle height
+                this.h = 60 + Math.random() * 60; 
                 this.x = canvas.width;
-                this.y = canvas.height - this.h - 50; // Ground level offset
+                this.y = canvas.height - this.h - 50; 
                 this.type = Math.random() > 0.7 ? 'RUG' : 'CANDLE';
             }
             
             draw() {
                 if(this.type === 'CANDLE') {
-                    // Draw Red Candle (Bearish)
-                    const flicker = Math.random() > 0.9 ? 2 : 0;
-                    
-                    // Shadow/Glow
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#ef4444';
-                    
-                    ctx.fillStyle = '#ef4444';
-                    ctx.fillRect(this.x + flicker, this.y, this.w, this.h);
-                    
-                    ctx.shadowBlur = 0; // Reset
-
-                    // Wicks
-                    ctx.fillStyle = '#fca5a5';
-                    ctx.fillRect(this.x + 14, this.y - 15, 2, 15); // Top wick
-                    ctx.fillRect(this.x + 14, this.y + this.h, 2, 15); // Bottom wick
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#ef4444';
+                    ctx.fillStyle = '#ef4444'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                    ctx.shadowBlur = 0; 
+                    ctx.fillStyle = '#fca5a5'; ctx.fillRect(this.x + 14, this.y - 15, 2, 15); 
                 } else {
-                    // Draw Rug (Police Car / Siren feel)
-                    ctx.fillStyle = '#111';
-                    ctx.fillRect(this.x, canvas.height - 90, 50, 40);
-                    // Lights
-                    const lightColor = Math.floor(Date.now() / 100) % 2 === 0 ? '#ef4444' : '#3b82f6';
-                    ctx.fillStyle = lightColor;
-                    ctx.beginPath();
-                    ctx.arc(this.x + 25, canvas.height - 95, 8, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = '#fff';
-                    ctx.font = "10px monospace";
-                    ctx.fillText("DEV", this.x + 15, canvas.height - 65);
+                    ctx.fillStyle = '#111'; ctx.fillRect(this.x, canvas.height - 90, 50, 40);
+                    ctx.fillStyle = Math.floor(Date.now() / 100) % 2 === 0 ? '#ef4444' : '#3b82f6';
+                    ctx.beginPath(); ctx.arc(this.x + 25, canvas.height - 95, 8, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.font = "10px monospace"; ctx.fillText("DEV", this.x + 15, canvas.height - 65);
                 }
             }
 
-            update() {
-                this.x -= gameSpeed;
-            }
+            update() { this.x -= gameSpeed; }
         }
 
         class Coin {
             constructor() {
                 this.r = 12;
                 this.x = canvas.width;
-                this.y = canvas.height - 180 - Math.random() * 120; // Floating height
+                this.y = canvas.height - 180 - Math.random() * 120;
                 this.floatOffset = Math.random() * Math.PI * 2;
             }
 
             draw() {
                 const yPos = this.y + Math.sin((Date.now()/200) + this.floatOffset) * 5;
-                
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#9945FF';
-                
-                ctx.beginPath();
-                ctx.arc(this.x, yPos, this.r, 0, Math.PI * 2);
-                ctx.fillStyle = '#000';
-                ctx.fill();
-                
-                ctx.strokeStyle = '#9945FF'; // Solana Purple
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                
-                ctx.fillStyle = '#14F195'; // Solana Green
-                ctx.font = "bold 12px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("S", this.x, yPos);
-                
+                ctx.shadowBlur = 10; ctx.shadowColor = '#9945FF';
+                ctx.beginPath(); ctx.arc(this.x, yPos, this.r, 0, Math.PI * 2);
+                ctx.fillStyle = '#000'; ctx.fill();
+                ctx.strokeStyle = '#9945FF'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.fillStyle = '#14F195'; ctx.font = "bold 12px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("S", this.x, yPos);
                 ctx.shadowBlur = 0;
             }
 
-            update() {
-                this.x -= gameSpeed;
-            }
-        }
-        
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x; this.y = y;
-                this.vx = (Math.random() - 0.5) * 10;
-                this.vy = (Math.random() - 0.5) * 10;
-                this.life = 1.0;
-                this.color = color;
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                this.life -= 0.05;
-            }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 4, 4);
-                ctx.globalAlpha = 1.0;
-            }
+            update() { this.x -= gameSpeed; }
         }
 
         // --- GAME LOOP ---
 
         function update() {
-            // Physics
             player.dy += player.gravity;
             player.y += player.dy;
 
-            // Ground Collision (Ground is at height - 50)
             if (player.y + player.h > canvas.height - 50) {
                 player.y = canvas.height - 50 - player.h;
                 player.dy = 0;
@@ -419,112 +332,48 @@
                 player.grounded = false;
             }
 
-            // Spawn Obstacles
             if (frame % Math.max(60, 100 - Math.floor(score/100)) === 0) {
                 if (Math.random() > 0.3) obstacles.push(new Obstacle());
             }
+            if (frame % 80 === 0) solanaCoins.push(new Coin());
 
-            // Spawn Coins
-            if (frame % 80 === 0) {
-                solanaCoins.push(new Coin());
-            }
-
-            // Update Obstacles
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 let obs = obstacles[i];
                 obs.update();
-
-                // Hitbox padding
                 const pad = 10;
-                if (
-                    player.x + pad < obs.x + (obs.type==='CANDLE' ? obs.w : 50) - pad &&
-                    player.x + player.w - pad > obs.x + pad &&
-                    player.y + pad < (obs.type==='CANDLE' ? obs.y + obs.h : canvas.height - 50) &&
-                    player.y + player.h - pad > (obs.type==='CANDLE' ? obs.y : canvas.height - 90)
-                ) {
+                if (player.x + pad < obs.x + (obs.type==='CANDLE' ? obs.w : 50) - pad && player.x + player.w - pad > obs.x + pad && player.y + pad < (obs.type==='CANDLE' ? obs.y + obs.h : canvas.height - 50) && player.y + player.h - pad > (obs.type==='CANDLE' ? obs.y : canvas.height - 90)) {
                     gameOver();
                 }
-
-                // Remove off-screen
-                if (obs.x + obs.w < -50) {
-                    obstacles.splice(i, 1);
-                    score += 10; // Pass obstacle points
-                }
+                if (obs.x + obs.w < -50) { obstacles.splice(i, 1); score += 10; }
             }
 
-            // Update Coins
             for (let i = solanaCoins.length - 1; i >= 0; i--) {
                 let coin = solanaCoins[i];
                 coin.update();
-
                 let dx = coin.x - (player.x + player.w/2);
                 let dy = coin.y - (player.y + player.h/2);
-                let distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < 35) { // Collecting
-                    coins++;
-                    score += 50; 
-                    document.getElementById('coinVal').innerText = coins;
-                    playCoin();
-                    
-                    // Spawn particles
-                    for(let k=0; k<5; k++) {
-                        particles.push(new Particle(coin.x, coin.y, '#14F195'));
-                    }
-                    
-                    solanaCoins.splice(i, 1);
+                if (Math.sqrt(dx * dx + dy * dy) < 35) {
+                    coins++; score += 50; document.getElementById('coinVal').innerText = coins; playCoin(); solanaCoins.splice(i, 1);
                 }
-
                 if (coin.x < -50) solanaCoins.splice(i, 1);
             }
-            
-            // Particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update();
-                if(particles[i].life <= 0) particles.splice(i, 1);
-            }
 
-            // Difficulty ramp
             if(frame % 500 === 0) gameSpeed += 0.5;
-
             score++;
             document.getElementById('scoreVal').innerText = Math.floor(score/10);
             frame++;
         }
 
         function draw() {
-            // Clear
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Chart Grid Background (Subtle)
-            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-            ctx.lineWidth = 1;
-            for(let i=0; i<canvas.width; i+=40) {
-                ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
-            }
-            for(let i=0; i<canvas.height; i+=40) {
-                ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
-            }
-
-            // Draw Floor
-            ctx.fillStyle = '#111';
-            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
             
-            // Floor Line (Green Candle Color)
-            ctx.strokeStyle = '#86efac'; 
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height - 50);
-            ctx.lineTo(canvas.width, canvas.height - 50);
-            ctx.stroke();
+            // Floor
+            ctx.fillStyle = '#111'; ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            ctx.strokeStyle = '#86efac'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, canvas.height - 50); ctx.lineTo(canvas.width, canvas.height - 50); ctx.stroke();
 
-            // Draw Player
             drawPlayer(player.x, player.y, player.w, player.h);
-
-            // Draw Entities
             obstacles.forEach(o => o.draw());
             solanaCoins.forEach(c => c.draw());
-            particles.forEach(p => p.draw());
         }
 
         function loop() {
@@ -535,7 +384,6 @@
         }
 
         // --- CONTROLS ---
-
         function jump() {
             if (player.grounded) {
                 player.dy = player.jumpPower;
@@ -544,23 +392,24 @@
             }
         }
 
-        window.addEventListener('keydown', e => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
-                e.preventDefault();
-                jump();
+        // Universal Input Handler
+        function handleInput(e) {
+            if (e.type === 'touchstart' || e.type === 'mousedown' || e.code === 'Space' || e.code === 'ArrowUp') {
+                if(e.type !== 'mousedown') e.preventDefault(); // Prevent scroll on touch/key
+                
+                if (!isRunning && document.getElementById('start-screen').classList.contains('hidden') === false) {
+                    startGame();
+                } else {
+                    jump();
+                }
             }
-        });
+        }
 
-        window.addEventListener('touchstart', (e) => {
-             e.preventDefault(); 
-             jump();
-        }, {passive: false});
-        
-        window.addEventListener('mousedown', jump);
+        window.addEventListener('keydown', handleInput);
+        window.addEventListener('touchstart', handleInput, {passive: false});
+        window.addEventListener('mousedown', handleInput);
 
-
-        // --- STATE MANAGEMENT ---
-
+        // --- STATE ---
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-over-screen').classList.add('hidden');
@@ -573,40 +422,12 @@
             isRunning = false;
             cancelAnimationFrame(animationId);
             playCrash();
-            
-            const roasts = [
-                "You held the bag too long.",
-                "Liquidation call received.",
-                "Back to McDonald's for you.",
-                "Have fun staying poor.",
-                "Dev sold everything.",
-                "Rugged by a 12 year old."
-            ];
-            const randomRoast = roasts[Math.floor(Math.random() * roasts.length)];
-            
-            document.getElementById('death-roast').innerText = `"${randomRoast}"`;
             document.getElementById('finalScore').innerText = Math.floor(score/10);
             document.getElementById('game-over-screen').classList.remove('hidden');
         }
 
-        function resetGame() {
-            startGame();
-        }
-
-        function resetVars() {
-            score = 0;
-            coins = 0;
-            frame = 0;
-            gameSpeed = 6;
-            obstacles = [];
-            solanaCoins = [];
-            particles = [];
-            player.y = 300;
-            player.dy = 0;
-            player.rotation = 0;
-            document.getElementById('scoreVal').innerText = "0";
-            document.getElementById('coinVal').innerText = "0";
-        }
+        function resetGame() { startGame(); }
+        function resetVars() { score = 0; coins = 0; frame = 0; gameSpeed = 6; obstacles = []; solanaCoins = []; player.y = 300; player.dy = 0; player.rotation = 0; document.getElementById('scoreVal').innerText = "0"; document.getElementById('coinVal').innerText = "0"; }
 
     </script>
 </body>
