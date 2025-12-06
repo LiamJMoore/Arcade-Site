@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Franklin's Mission | DEGENGAMES.FUN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="image_514803.png" type="image/png">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            margin: 0; padding: 0;
+            background-color: #0f172a;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+            background: #4ade80; /* Jungle Green Sky base */
+        }
+        
+        /* Parallax Background Layers */
+        .bg-layer {
+            position: absolute; top: 0; left: 0; width: 200%; height: 100%;
+            background-repeat: repeat-x;
+            background-size: contain;
+            z-index: 0;
+        }
+        
+        /* Sky/Jungle */
+        #bg-sky {
+            background: linear-gradient(to bottom, #60a5fa 0%, #bfdbfe 80%, #22c55e 100%);
+        }
+        
+        #bg-trees {
+            bottom: 0; height: 40%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" preserveAspectRatio="none"><path d="M0,300 L50,150 L100,300 L150,100 L200,300 L250,120 L300,300 L350,180 L400,300 L450,50 L500,300 L550,150 L600,300 L650,100 L700,300 L750,120 L800,300 L850,180 L900,300 L950,50 L1000,300 Z" fill="%23166534" opacity="0.8"/></svg>');
+            animation: scroll 20s linear infinite;
+        }
+        
+        #bg-water {
+            bottom: 0; height: 15%; width: 100%;
+            background: linear-gradient(to bottom, #0ea5e9 0%, #0284c7 100%);
+            z-index: 1; opacity: 0.9;
+        }
+
+        canvas {
+            position: absolute; top: 0; left: 0; z-index: 10;
+        }
+
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* UI */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        .nav-btn {
+            pointer-events: auto; background: rgba(0,0,0,0.5);
+            padding: 10px; border-radius: 8px; border: 2px solid white;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { background: white; color: black; }
+
+        #start-screen, #game-over-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(0,0,0,0.9);
+            padding: 40px; border: 4px solid #22c55e; border-radius: 12px;
+            pointer-events: auto; z-index: 60; width: 90%; max-width: 500px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+
+        .btn {
+            background: #22c55e; color: black; border: 4px solid #15803d;
+            padding: 15px 30px; font-family: 'Press Start 2P'; font-size: 14px;
+            cursor: pointer; margin-top: 20px; width: 100%;
+            text-transform: uppercase; font-weight: bold;
+            box-shadow: 4px 4px 0 #000;
+        }
+        .btn:active { transform: translate(4px, 4px); box-shadow: none; }
+
+        .hidden { display: none !important; }
+        
+        /* Touch Controls */
+        .touch-zone { position: absolute; bottom: 0; height: 100%; width: 50%; z-index: 40; }
+        #left-zone { left: 0; } #right-zone { right: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="bg-sky" class="bg-layer"></div>
+        <div id="bg-trees" class="bg-layer"></div>
+        <div id="bg-water" class="bg-layer"></div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-layer">
+            <div class="flex justify-between w-full items-start">
+                <a href="index.html" class="nav-btn"><i data-lucide="arrow-left" width="20"></i></a>
+                <div class="text-right text-white drop-shadow-md">
+                    <div class="text-sm text-yellow-400 mb-1">INTEL: <span id="scoreVal">0</span></div>
+                    <div class="text-[10px] text-red-400">WAVE: <span id="waveVal">1</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="start-screen">
+            <div class="w-32 h-32 mx-auto mb-6 border-4 border-white overflow-hidden rounded-lg shadow-lg">
+                <img src="image_514803.png" class="w-full h-full object-cover">
+            </div>
+            <h1 class="text-xl mb-4 text-green-400 leading-tight">FRANKLIN'S MISSION</h1>
+            <p class="text-[10px] text-gray-300 mb-6 leading-6">
+                Target: Narco Bears 🐻<br>
+                Mission: Secure the Bag 💰<br>
+                Intel: Don't get liquidated.<br><br>
+                [ARROWS/TOUCH] Move • [SPACE] Fire
+            </p>
+            <button class="btn" onclick="startGame()">DEPLOY</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1 class="text-2xl mb-4 text-red-500">MIA</h1>
+            <p class="text-[10px] text-gray-300 mb-6">"Franklin was lost in the jungle."</p>
+            <div class="text-sm mb-4 text-yellow-400">SCORE: <span id="finalScore">0</span></div>
+            <button class="btn" onclick="startGame()">RE-DEPLOY</button>
+            <button class="btn" style="background:transparent; border:2px solid #666; color:#aaa; box-shadow:none; margin-top:10px; font-size:10px;" onclick="window.location.href='index.html'">ABORT MISSION</button>
+        </div>
+
+        <div id="left-zone" class="touch-zone" style="width:30%"></div> <div id="right-zone" class="touch-zone" style="left:30%; width:70%"></div> </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- ASSETS ---
+        const franklinImg = new Image();
+        franklinImg.src = 'image_514803.png'; // Using the meme image as the "Ship" texture for now (or circle fallback)
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // STATE
+        let isPlaying = false;
+        let score = 0;
+        let wave = 1;
+        let frame = 0;
+        let animationId;
+
+        // ENTITIES
+        const player = {
+            x: 50,
+            y: canvas.height / 2,
+            w: 60,
+            h: 40,
+            speed: 6,
+            dy: 0,
+            cooldown: 0
+        };
+
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+
+        // CONTROLS
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if(e.code === 'Space') shoot();
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Mobile
+        let touchY = null;
+        document.getElementById('left-zone').addEventListener('touchstart', e => {
+            e.preventDefault();
+            touchY = e.touches[0].clientY;
+        });
+        document.getElementById('left-zone').addEventListener('touchmove', e => {
+            e.preventDefault();
+            const currentY = e.touches[0].clientY;
+            player.y = currentY - player.h/2; // Direct control
+        });
+        document.getElementById('right-zone').addEventListener('touchstart', e => {
+            e.preventDefault();
+            shoot();
+        });
+
+        function shoot() {
+            if(!isPlaying) return;
+            if(player.cooldown > 0) return;
+            
+            // Spawn Rocket
+            bullets.push({ 
+                x: player.x + player.w, 
+                y: player.y + player.h/2, 
+                w: 15, h: 6, speed: 12,
+                color: '#facc15' 
+            });
+            
+            player.cooldown = 15; // Fire rate
+        }
+
+        function spawnEnemy() {
+            const types = ['🐻', '🚤', '🚁']; // Bear, Boat, Heli
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            enemies.push({
+                x: canvas.width + 50,
+                y: Math.random() * (canvas.height - 100) + 50,
+                w: 50, h: 50,
+                speed: 3 + (wave * 0.5),
+                type: type,
+                hp: 1 + Math.floor(wave / 3)
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            for(let i=0; i<10; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        // GAME LOOP
+        function update() {
+            // Player Movement
+            if (keys['ArrowUp']) player.y -= player.speed;
+            if (keys['ArrowDown']) player.y += player.speed;
+            
+            // Bounds
+            if (player.y < 0) player.y = 0;
+            if (player.y > canvas.height - player.h) player.y = canvas.height - player.h;
+            
+            if (player.cooldown > 0) player.cooldown--;
+
+            // Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.speed;
+                if (b.x > canvas.width) bullets.splice(i, 1);
+            }
+
+            // Enemies
+            if (frame % Math.max(30, 80 - (wave * 5)) === 0) spawnEnemy();
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.x -= e.speed;
+
+                // Collision: Bullet vs Enemy
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
+                    if (b.x < e.x + e.w && b.x + b.w > e.x &&
+                        b.y < e.y + e.h && b.y + b.h > e.y) {
+                        
+                        e.hp--;
+                        bullets.splice(j, 1);
+                        createExplosion(b.x, b.y, '#fff'); // Spark
+
+                        if (e.hp <= 0) {
+                            createExplosion(e.x, e.y, '#ef4444'); // Boom
+                            enemies.splice(i, 1);
+                            score += 100;
+                            break;
+                        }
+                    }
+                }
+
+                // Collision: Player vs Enemy
+                if (player.x < e.x + e.w && player.x + player.w > e.x &&
+                    player.y < e.y + e.h && player.y + player.h > e.y) {
+                    gameOver();
+                }
+
+                if (e.x + e.w < 0) enemies.splice(i, 1);
+            }
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life -= 0.05;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Difficulty
+            if (score > wave * 1000) wave++;
+
+            // UI
+            document.getElementById('scoreVal').innerText = score;
+            document.getElementById('waveVal').innerText = wave;
+
+            frame++;
+            animationId = requestAnimationFrame(loop);
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Player (Helicopter Emoji or Image)
+            ctx.font = "40px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            
+            // Shadow
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.beginPath(); ctx.ellipse(player.x + player.w/2, player.y + 80, 30, 10, 0, 0, Math.PI*2); ctx.fill();
+
+            // Franklin
+            // Using turtle + helicopter emoji combo for vibe if image fails to fit perfectly in canvas context
+            ctx.fillText("🚁", player.x + player.w/2, player.y + player.h/2);
+            ctx.font = "20px Arial";
+            ctx.fillText("🐢", player.x + player.w/2 + 5, player.y + player.h/2 + 5);
+
+            // Bullets
+            bullets.forEach(b => {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.fillStyle = "white";
+                ctx.fillRect(b.x + b.w, b.y + 1, 4, 4); // Tip
+            });
+
+            // Enemies
+            enemies.forEach(e => {
+                ctx.font = "40px Arial";
+                ctx.fillText(e.type, e.x + e.w/2, e.y + e.h/2);
+            });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            score = 0; wave = 1; enemies = []; bullets = []; particles = []; frame = 0;
+            isPlaying = true;
+            update();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('game-over-screen').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
