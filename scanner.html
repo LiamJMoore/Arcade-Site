@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -18,14 +17,14 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Press+Start+2P&family=Kalam:wght@700&family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@700;900&display=swap');
         
         :root { 
-            --bg-color: #030502; 
+            --roast-bg: #030502; 
             --pump-green: #86efac; 
             --pump-purple: #a855f7;
             --pump-red: #ef4444; 
             --pump-yellow: #facc15; 
             --card-bg: #0a100d; 
         }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: white; overflow-x: hidden; background-image: radial-gradient(circle at 50% 0%, rgba(134, 239, 172, 0.1), transparent 50%); }
+        body { font-family: 'Inter', sans-serif; background-color: var(--roast-bg); color: white; overflow-x: hidden; background-image: radial-gradient(circle at 50% 0%, rgba(134, 239, 172, 0.1), transparent 50%); }
         
         #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.1; pointer-events: none; }
         nav, header, #results-section { position: relative; z-index: 10; }
@@ -45,8 +44,17 @@
 
         /* Report Designs */
         .report-paper { background: #0a100d; color: white; width: 350px; border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(134, 239, 172, 0.1); border: 2px solid #333; position: relative; }
-        .report-header { background: #111; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--pump-green); }
-        .report-stamp { position: absolute; top: 12px; right: 12px; font-size: 2.2rem; font-weight: 900; color: var(--pump-red); border: 4px solid var(--pump-red); padding: 5px; transform: rotate(-12deg); z-index: 50; background: rgba(0,0,0,0.8); font-family: 'Press Start 2P'; }
+        .report-header { background: #111; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--pump-green); position: relative; }
+        
+        /* FIXED STAMP - No Overlap */
+        .report-stamp { 
+            position: absolute; top: 10px; right: 10px; 
+            font-size: 2rem; width: 60px; height: 60px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; color: var(--pump-red); border: 4px solid var(--pump-red); 
+            transform: rotate(-12deg); z-index: 50; background: rgba(0,0,0,0.9); 
+            font-family: 'Press Start 2P'; 
+        }
         
         .receipt-paper { background: #fff; color: black; width: 320px; padding: 20px; font-family: 'Courier Prime'; position: relative; }
         .receipt-paper::before { content: ''; position: absolute; top: -5px; left: 0; width: 100%; height: 10px; background: radial-gradient(circle, transparent, transparent 50%, #fff 50%, #fff 100%) -7px -8px / 16px 16px repeat-x; }
@@ -269,33 +277,38 @@
         }
 
         function processLogic(wallet, balance, count, topTicker, topMint, totalUsd) {
+            // 1. SHOW RESULTS FIRST (UI Priority)
             document.getElementById('input-section').style.display = 'none';
-            document.getElementById('results-section').style.display = 'block'; // Force visible
-            document.getElementById('results-section').classList.add('fade-in');
+            const res = document.getElementById('results-section');
+            res.style.display = 'block'; 
+            res.classList.add('fade-in');
 
             const type = balance > 100 ? ARCHETYPES.WHALE : (balance < 1 ? ARCHETYPES.JEET : ARCHETYPES.NPC);
             currentProfile = { ...type, bag: topTicker, bagAddress: topMint };
 
-            // Save DB
-            supabase.from('leaderboard').insert([{ wallet_address: wallet, balance: balance, grade: type.grade }]).then();
+            // 2. UPDATE CARD TEXT (CRITICAL FIX)
+            try {
+                document.getElementById('card-wallet-id').innerText = wallet.substring(0,4)+"...";
+                document.getElementById('card-archetype').innerText = type.name;
+                document.getElementById('card-stamp').innerText = type.grade;
+                document.getElementById('card-comment').innerText = `"Your portfolio looks like a crime scene."`;
+                document.getElementById('card-bag').innerText = topTicker;
+                document.getElementById('story-grade').innerText = type.grade;
+            } catch(e) { console.error("Card update error:", e); }
 
-            // UI Updates
+            // 3. UPDATE DASHBOARD
             document.getElementById('grade-display').innerText = type.grade;
             document.getElementById('risk-val').innerText = type.risk;
             document.getElementById('real-balance').innerHTML = `${balance.toFixed(2)} ◎ <span class="text-xs text-gray-500">$${totalUsd.toLocaleString()}</span>`;
             document.getElementById('real-token-count').innerText = count;
 
-            // Card Updates
-            document.getElementById('card-wallet-id').innerText = wallet.substring(0,4)+"...";
-            document.getElementById('card-archetype').innerText = type.name;
-            document.getElementById('card-stamp').innerText = type.grade;
-            document.getElementById('card-comment').innerText = `"Your portfolio looks like a crime scene."`;
-            document.getElementById('card-bag').innerText = topTicker;
-            document.getElementById('story-grade').innerText = type.grade;
-
+            // 4. LOAD EXTRAS (Async - won't block UI)
             generateRoastCards();
             startLiveFeed();
             confetti();
+            
+            // Database save in background
+            supabase.from('leaderboard').insert([{ wallet_address: wallet, balance: balance, grade: type.grade }]).then();
         }
 
         function generateRoastCards() {
@@ -337,9 +350,24 @@
         }
         function closeHallOfFame(e) { if(e.target.id === 'hall-of-fame-modal') document.getElementById('hall-of-fame-modal').style.display = 'none'; }
         
-        function openModal() { document.getElementById('report-card-modal').style.display = 'flex'; }
+        function openModal() { 
+            document.getElementById('report-card-modal').style.display = 'flex'; 
+            drawRadar([Math.random(), Math.random(), Math.random(), Math.random(), Math.random()]);
+        }
         function closeModal(e) { if (e.target.id === 'report-card-modal') document.getElementById('report-card-modal').style.display = 'none'; }
         
+        function drawRadar(data) {
+            const c = document.getElementById('radarCanvas');
+            if(!c) return;
+            const ctx = c.getContext('2d');
+            const w = c.width, h = c.height, cx = w/2, cy = h/2, r = 50;
+            ctx.clearRect(0,0,w,h); ctx.strokeStyle = '#333';
+            for(let j=1; j<=3; j++) { ctx.beginPath(); for(let i=0; i<5; i++) { const a = (Math.PI*2*i)/5 - Math.PI/2; const rad = (r/3)*j; const x = cx + Math.cos(a)*rad; const y = cy + Math.sin(a)*rad; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); } ctx.closePath(); ctx.stroke(); }
+            ctx.fillStyle = 'rgba(134, 239, 172, 0.3)'; ctx.strokeStyle = '#86efac'; ctx.beginPath();
+            for(let i=0; i<5; i++) { const val = data[i]; const a = (Math.PI*2*i)/5 - Math.PI/2; const rad = r * val; const x = cx + Math.cos(a)*rad; const y = cy + Math.sin(a)*rad; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+
         function downloadAndShare() {
             const el = document.getElementById('capture-target');
             html2canvas(el, { 
