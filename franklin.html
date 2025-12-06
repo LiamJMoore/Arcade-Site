@@ -24,7 +24,7 @@
             position: relative;
             width: 100vw; height: 100vh;
             overflow: hidden;
-            /* Warzone Sky Gradient based on your reference image */
+            /* Warzone Sky Gradient */
             background: linear-gradient(to bottom, #607890 0%, #8fa3ad 40%, #c4b598 80%, #5a4a3a 100%);
         }
 
@@ -86,8 +86,9 @@
         </div>
 
         <div id="start-screen">
-            <div class="w-32 h-32 mx-auto mb-6 border-4 border-yellow-600 overflow-hidden rounded-lg shadow-lg bg-black">
-                <img src="image_514803.png" class="w-full h-full object-cover">
+            <div class="w-32 h-32 mx-auto mb-6 border-4 border-yellow-600 overflow-hidden rounded-lg shadow-lg bg-black flex items-center justify-center">
+                <img src="image_514803.png" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                <div style="display:none; font-size: 4rem;">🚁</div>
             </div>
             <h1 class="text-xl mb-4 text-yellow-500 leading-tight" style="text-shadow: 2px 2px 0 #000;">FRANKLIN'S WAR</h1>
             <p class="text-[10px] text-gray-400 mb-6 leading-6">
@@ -173,8 +174,8 @@
             
             bullets.push({ 
                 x: player.x + player.w - 10, 
-                y: player.y + player.h/2 + 5, 
-                w: 15, h: 5, speed: 15, color: '#facc15' 
+                y: player.y + player.h/2, 
+                w: 20, h: 6, speed: 15, color: '#facc15' 
             });
             player.cooldown = 8;
         }
@@ -204,20 +205,11 @@
         }
 
         function createExplosion(x, y) {
-            for(let i=0; i<10; i++) {
-                explosions.push({
-                    x: x, y: y,
-                    vx: (Math.random()-0.5)*10,
-                    vy: (Math.random()-0.5)*10,
-                    life: 1.0, color: '#f97316'
-                });
-            }
+            explosions.push({ x: x, y: y, radius: 5, alpha: 1 });
         }
 
         // GAME LOOP
         function update() {
-            if(!isPlaying) return;
-
             // Player
             if (keys['ArrowUp']) player.y -= player.speed;
             if (keys['ArrowDown']) player.y += player.speed;
@@ -276,9 +268,10 @@
 
             // Explosions
             for (let i = explosions.length - 1; i >= 0; i--) {
-                let p = explosions[i];
-                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-                if(p.life <= 0) explosions.splice(i, 1);
+                let ex = explosions[i];
+                ex.radius += 2;
+                ex.alpha -= 0.05;
+                if(ex.alpha <= 0) explosions.splice(i, 1);
             }
 
             if (score > wave * 10) wave++;
@@ -288,7 +281,7 @@
 
             draw();
             frame++;
-            animationId = requestAnimationFrame(update);
+            if(isPlaying) animationId = requestAnimationFrame(update);
         }
 
         function draw() {
@@ -301,11 +294,14 @@
             });
 
             // Draw Player
-            if(playerImg.complete) {
+            if(playerImg.complete && playerImg.naturalWidth > 0) {
                 ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
             } else {
-                ctx.fillStyle = '#fbbf24';
-                ctx.fillRect(player.x, player.y, player.w, player.h);
+                // Fallback Shape (Green Heli)
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(player.x, player.y + 10, player.w, 30);
+                ctx.fillStyle = '#fbbf24'; // Rotor
+                ctx.fillRect(player.x, player.y, player.w + 20, 5);
             }
 
             // Draw Bullets
@@ -321,11 +317,11 @@
             });
 
             // Draw Explosions
-            explosions.forEach(p => {
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 4, 4);
-                ctx.globalAlpha = 1.0;
+            explosions.forEach(ex => {
+                ctx.fillStyle = `rgba(255, 69, 0, ${ex.alpha})`;
+                ctx.beginPath();
+                ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI*2);
+                ctx.fill();
             });
         }
 
@@ -344,6 +340,11 @@
             document.getElementById('finalScore').innerText = score;
             document.getElementById('game-over-screen').classList.remove('hidden');
         }
+
+        // Initial Draw (Background)
+        resize();
+        draw();
+
     </script>
 </body>
 </html>
