@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner | RoastMe.fun</title>
+    <title>Scanner | IAMDEGEN.FUN</title>
     <link rel="icon" href="12.png" type="image/png">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,49 +18,53 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Press+Start+2P&family=Kalam:wght@700&family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@700;900&display=swap');
         
         :root { 
-            --roast-bg: #0f0502; --roast-orange: #f97316; --roast-fire: #ef4444; 
-            --roast-yellow: #facc15; --roast-card: #1c100b; --roast-text: #fed7aa; --roast-blue: #60a5fa;
+            --bg-color: #030502; 
+            --pump-green: #86efac; 
+            --pump-purple: #a855f7;
+            --pump-red: #ef4444; 
+            --pump-yellow: #facc15; 
+            --card-bg: #0a100d; 
         }
-        body { font-family: 'Inter', sans-serif; background-color: var(--roast-bg); color: white; overflow-x: hidden; background: #050201; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: white; overflow-x: hidden; background-image: radial-gradient(circle at 50% 0%, rgba(134, 239, 172, 0.1), transparent 50%); }
         
         #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.1; pointer-events: none; }
         nav, header, #results-section { position: relative; z-index: 10; }
+        .breaking-news { z-index: 60; }
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-hand { font-family: 'Kalam', cursive; }
         .animate-marquee { animation: drift 30s linear infinite; }
         @keyframes drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-        .roast-card { background-color: var(--roast-card); border: 2px solid rgba(249, 115, 22, 0.1); transition: all 0.2s; position: relative; overflow: hidden; }
-        .roast-card:hover { border-color: var(--roast-orange); transform: translateY(-5px); box-shadow: 0 0 20px rgba(249, 115, 22, 0.2); z-index: 10; }
+        /* Cards */
+        .roast-card { background-color: var(--card-bg); border: 1px solid rgba(134, 239, 172, 0.2); transition: all 0.2s; position: relative; overflow: hidden; backdrop-filter: blur(10px); }
+        .roast-card:hover { border-color: var(--pump-green); transform: translateY(-5px); box-shadow: 0 0 20px rgba(134, 239, 172, 0.2); z-index: 10; }
         
-        /* CARD VISIBILITY */
         .card-variant { display: none !important; }
         .card-variant.active { display: block !important; animation: popIn 0.3s ease; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        /* CARD STYLES */
-        .report-paper { background: #0f0502; color: white; width: 350px; border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(249, 115, 22, 0.1); border: 2px solid #33180f; position: relative; }
-        .report-header { background: #1c0a05; padding: 20px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--roast-orange); }
-        .report-stamp { position: absolute; top: 12px; right: 12px; font-size: 2.2rem; font-weight: 900; color: var(--roast-fire); border: 4px solid var(--roast-fire); padding: 5px; transform: rotate(-12deg); opacity: 0.9; font-family: 'Press Start 2P'; z-index: 50; background: rgba(0,0,0,0.8); }
+        /* Report Designs */
+        .report-paper { background: #0a100d; color: white; width: 350px; border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(134, 239, 172, 0.1); border: 2px solid #333; position: relative; }
+        .report-header { background: #111; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--pump-green); }
+        .report-stamp { position: absolute; top: 12px; right: 12px; font-size: 2.2rem; font-weight: 900; color: var(--pump-red); border: 4px solid var(--pump-red); padding: 5px; transform: rotate(-12deg); z-index: 50; background: rgba(0,0,0,0.8); font-family: 'Press Start 2P'; }
         
         .receipt-paper { background: #fff; color: black; width: 320px; padding: 20px; font-family: 'Courier Prime'; position: relative; }
         .receipt-paper::before { content: ''; position: absolute; top: -5px; left: 0; width: 100%; height: 10px; background: radial-gradient(circle, transparent, transparent 50%, #fff 50%, #fff 100%) -7px -8px / 16px 16px repeat-x; }
         
-        .poke-card { width: 320px; background: #facc15; padding: 10px; border-radius: 12px; }
+        .poke-card { width: 320px; background: #facc15; padding: 10px; border-radius: 12px; color: black; }
         .poke-inner { background: #d7b836; padding: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
         
-        .wanted-paper { width: 320px; background: #e6ccaa; padding: 20px; color: #3e2723; text-align: center; border: 2px solid #3e2723; background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png'); }
-        
-        .story-paper { width: 320px; height: 568px; background: linear-gradient(to bottom, #1a2332, #0d1117); color: white; border-radius: 24px; border: 4px solid var(--roast-orange); text-align: center; }
+        .wanted-paper { width: 320px; background: #e6ccaa; padding: 20px; color: #3e2723; text-align: center; border: 4px solid #3e2723; }
+        .story-paper { width: 320px; height: 568px; background: linear-gradient(to bottom, #1a2332, #0d1117); color: white; border-radius: 24px; border: 4px solid var(--pump-green); text-align: center; }
 
-        .wrapped-card { aspect-ratio: 1/1; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; overflow: hidden; background: #1c100b; border: 1px solid #333; }
-        .theme-green { background: var(--roast-orange); color: black; }
+        /* Helpers */
         .style-tab { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; font-size: 10px; cursor: pointer; color: #aaa; }
-        .style-tab.active { background: var(--roast-orange); color: black; }
-        .live-item { font-size: 10px; padding: 5px; border-bottom: 1px solid #222; color: #666; font-family: monospace; }
-        
-        /* Modal */
-        #report-card-modal, #hall-of-fame-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .style-tab.active { background: var(--pump-green); color: black; }
+        .stat-bar { height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-bottom: 5px; }
+        .stat-fill { height: 100%; background: var(--pump-green); transition: width 1s; }
+        .wrapped-card { background: #111; border: 1px solid #333; }
+
+        #report-card-modal, #hall-of-fame-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -67,10 +72,10 @@
 
     <canvas id="matrix-canvas"></canvas>
 
-    <div class="fixed top-0 left-0 w-full bg-[var(--roast-yellow)] text-black font-bold font-mono text-xs py-2 breaking-news z-50">
+    <div class="fixed top-0 left-0 w-full bg-[var(--pump-green)] text-black font-bold font-mono text-xs py-2 breaking-news z-50">
         <div class="whitespace-nowrap flex animate-marquee" id="ticker-content">
-            <span class="mx-4">🔥 GET COOKED ON-CHAIN 🔥</span>
-            <span class="mx-4">● CONNECTING TO SOLANA ●</span>
+            <span class="mx-4">🔥 GET ROASTED ON-CHAIN 🔥</span>
+            <span class="mx-4">● SOLANA NETWORK STATUS: CONGESTED (AS USUAL) ●</span>
         </div>
     </div>
 
@@ -79,32 +84,32 @@
             <i data-lucide="arrow-left" width="14"></i> ARCADE LOBBY
         </a>
         <div class="flex items-center gap-2">
-            <img src="12.png" class="w-8 h-8 rounded-full border border-orange-500">
-            <div class="text-[var(--roast-orange)] font-pixel text-xs">ROASTME<span class="text-white">.FUN</span></div>
+            <img src="12.png" class="w-8 h-8 rounded-full border border-green-500">
+            <div class="text-[var(--pump-green)] font-pixel text-xs">IAMDEGEN<span class="text-white">.FUN</span></div>
         </div>
     </nav>
 
     <div id="input-section" class="container mx-auto px-4 max-w-lg text-center mt-10 relative z-20">
-        <img src="12.png" class="w-24 h-24 mx-auto mb-6 animate-pulse drop-shadow-[0_0_20px_rgba(249,115,22,0.5)]">
+        <img src="12.png" class="w-24 h-24 mx-auto mb-6 animate-pulse drop-shadow-[0_0_20px_rgba(134,239,172,0.5)]">
         <h1 class="text-2xl md:text-3xl font-pixel mb-6 leading-tight text-white">
-            WALLET <span class="text-[var(--roast-orange)]">SCANNER</span>
+            WALLET <span class="text-[var(--pump-green)]">SCANNER</span>
         </h1>
-        <div class="bg-[#1c100b] p-2 rounded-xl flex flex-col items-center border border-[var(--roast-orange)]/30 shadow-2xl">
+        <div class="bg-[#111] p-2 rounded-xl flex flex-col items-center border border-green-500/30 shadow-2xl">
             <input type="text" id="wallet-input" placeholder="Paste Solana Address..." class="bg-transparent text-white px-4 py-3 w-full focus:outline-none font-mono text-xs text-center placeholder-gray-600" onkeypress="handleEnter(event)">
-            <button onclick="fetchRealStats()" class="w-full bg-[var(--roast-orange)] text-black font-pixel text-[10px] px-6 py-4 rounded mt-2 hover:bg-white transition-colors">SCAN NOW</button>
+            <button onclick="fetchRealStats()" class="w-full bg-[var(--pump-green)] text-black font-pixel text-[10px] px-6 py-4 rounded mt-2 hover:bg-white transition-colors">SCAN NOW</button>
         </div>
-        <div id="loading-ui" class="hidden mt-4 text-[10px] font-mono text-[var(--roast-orange)] animate-pulse">READING CHAIN DATA...</div>
+        <div id="loading-ui" class="hidden mt-4 text-[10px] font-mono text-[var(--pump-green)] animate-pulse">READING CHAIN DATA...</div>
     </div>
 
     <div id="results-section" class="container mx-auto max-w-5xl px-4 mt-10 relative z-20" style="display:none;">
         <div class="flex flex-col lg:flex-row gap-6">
             
             <div class="flex-1 space-y-4">
-                <div class="roast-card p-6 rounded-xl border-l-4 border-[var(--roast-orange)] bg-gradient-to-r from-[#1c100b] to-black">
+                <div class="roast-card p-6 rounded-xl border-l-4 border-[var(--pump-green)] bg-gradient-to-r from-[#111] to-black">
                     <div class="flex justify-between items-center">
                         <div>
                             <div class="text-[10px] text-gray-500 font-mono mb-1">FINAL GRADE</div>
-                            <div class="text-xs text-[var(--roast-orange)]">Risk: <span id="risk-val">CALCULATING</span></div>
+                            <div class="text-xs text-[var(--pump-green)]">Risk: <span id="risk-val">CALCULATING</span></div>
                         </div>
                         <div id="grade-display" class="text-7xl font-pixel text-white">?</div>
                     </div>
@@ -122,16 +127,16 @@
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <button id="view-report-btn" onclick="openModal()" class="bg-[var(--roast-orange)] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white transition-colors"><i data-lucide="flame" width="14"></i> SEE CARD</button>
-                    <button onclick="openHallOfFame()" class="bg-[var(--roast-yellow)] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white"><i data-lucide="trophy" width="14"></i> LEADERS</button>
-                    <button onclick="openBubbleMap()" class="bg-[#c084fc] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white"><i data-lucide="aperture" width="14"></i> MAP</button>
+                    <button id="view-report-btn" onclick="openModal()" class="bg-[var(--pump-green)] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white transition-colors"><i data-lucide="flame" width="14"></i> SEE CARD</button>
+                    <button onclick="openHallOfFame()" class="bg-[var(--pump-yellow)] text-black font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white"><i data-lucide="trophy" width="14"></i> LEADERS</button>
+                    <button onclick="openBubbleMap()" class="bg-[var(--pump-purple)] text-white font-bold py-3 rounded-lg text-[10px] flex justify-center gap-2 items-center hover:bg-white hover:text-black"><i data-lucide="aperture" width="14"></i> MAP</button>
                     <button onclick="location.reload()" class="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 flex justify-center"><i data-lucide="refresh-cw" width="14"></i></button>
                 </div>
             </div>
             
             <div class="lg:w-72 space-y-4">
                 <div class="roast-card p-4 rounded-xl h-64 overflow-hidden relative">
-                    <div class="text-[10px] text-[var(--roast-orange)] font-mono mb-2 border-b border-white/10 pb-2">LIVE VICTIMS</div>
+                    <div class="text-[10px] text-[var(--pump-green)] font-mono mb-2 border-b border-white/10 pb-2">LIVE VICTIMS</div>
                     <div id="live-feed" class="space-y-2"></div>
                 </div>
             </div>
@@ -139,7 +144,7 @@
 
         <div class="mt-12 mb-20">
             <div class="flex items-center justify-center gap-2 mb-6">
-                <i data-lucide="alert-triangle" class="text-red-500"></i>
+                <i data-lucide="alert-triangle" class="text-[var(--pump-red)]"></i>
                 <h3 class="font-pixel text-lg text-white">REALITY CHECK</h3>
             </div>
             <div id="roast-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
@@ -159,20 +164,20 @@
                 <div id="card-standard" class="card-variant active report-paper">
                     <div class="report-header">
                         <div class="flex items-center gap-3">
-                            <img src="12.png" class="w-10 h-10 rounded-full border border-orange-500">
-                            <div><div class="font-pixel text-[10px] text-[var(--roast-orange)]">ROASTME.FUN</div><div class="text-[8px] text-gray-500 font-mono">OFFICIAL REPORT</div></div>
+                            <img src="12.png" class="w-10 h-10 rounded-full border border-green-500">
+                            <div><div class="font-pixel text-[10px] text-[var(--pump-green)]">IAMDEGEN.FUN</div><div class="text-[8px] text-gray-500 font-mono">OFFICIAL REPORT</div></div>
                         </div>
                         <div id="card-stamp" class="report-stamp">F</div>
                     </div>
                     <div class="p-6">
                         <div class="flex gap-4 mb-4">
-                            <div class="w-1/2 bg-[#1a2332] rounded p-2 border border-white/5 flex items-center justify-center"><canvas id="radarCanvas" width="120" height="120"></canvas></div>
+                            <div class="w-1/2 bg-[#111] rounded p-2 border border-white/5 flex items-center justify-center"><canvas id="radarCanvas" width="120" height="120"></canvas></div>
                             <div class="w-1/2 space-y-2">
                                 <div><div class="text-[8px] text-gray-500">ARCHETYPE</div><div id="card-archetype" class="text-xs font-bold text-white">LOADING...</div></div>
                                 <div><div class="text-[8px] text-gray-500">BIGGEST BAG</div><div id="card-bag" class="text-xs font-bold text-blue-400">LOADING...</div></div>
                             </div>
                         </div>
-                        <div class="bg-[#1a2332] p-3 rounded border border-white/5"><div class="text-[8px] text-[var(--roast-orange)] font-bold mb-1">CHEF'S COMMENT</div><p id="card-comment" class="font-hand text-xs text-gray-300 italic">...</p></div>
+                        <div class="bg-[#111] p-3 rounded border border-white/5"><div class="text-[8px] text-[var(--pump-green)] font-bold mb-1">CHEF'S COMMENT</div><p id="card-comment" class="font-hand text-xs text-gray-300 italic">...</p></div>
                     </div>
                 </div>
                 <div id="card-receipt" class="card-variant receipt-paper">
@@ -194,7 +199,7 @@
                     <div class="crime-list">CRIMES: LOSING MONEY</div>
                 </div>
                 <div id="card-story" class="card-variant story-paper">
-                    <div class="story-header">ROASTME</div>
+                    <div class="story-header">IAMDEGEN</div>
                     <div class="story-body"><div id="story-grade" class="story-grade">?</div></div>
                 </div>
             </div>
@@ -205,8 +210,8 @@
     </div>
 
     <div id="hall-of-fame-modal" onclick="closeHallOfFame(event)" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-4">
-        <div class="bg-[#0f0502] border border-[var(--roast-yellow)] w-full max-w-md rounded-xl overflow-hidden p-4 relative" onclick="event.stopPropagation()">
-            <div class="text-[var(--roast-yellow)] font-bold mb-4 text-center">WHALE LEADERBOARD</div>
+        <div class="bg-[#0f0502] border border-[var(--pump-yellow)] w-full max-w-md rounded-xl overflow-hidden p-4 relative" onclick="event.stopPropagation()">
+            <div class="text-[var(--pump-yellow)] font-bold mb-4 text-center">WHALE LEADERBOARD</div>
             <table class="w-full text-left"><tbody id="leaderboard-body" class="text-xs text-gray-400"></tbody></table>
         </div>
     </div>
@@ -223,7 +228,7 @@
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
         const fontSize = 24; let columns = canvas.width / fontSize; const drops = Array(Math.floor(columns)).fill(1);
-        function drawMatrix() { ctx.fillStyle = "rgba(5, 2, 1, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#f97316"; ctx.font = fontSize + "px monospace"; for(let i=0; i<drops.length; i++) { const text = emojis[Math.floor(Math.random() * emojis.length)]; ctx.fillText(text, i*fontSize, drops[i]*fontSize); if(drops[i]*fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++; } }
+        function drawMatrix() { ctx.fillStyle = "rgba(5, 2, 1, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#86efac"; ctx.font = fontSize + "px monospace"; for(let i=0; i<drops.length; i++) { const text = emojis[Math.floor(Math.random() * emojis.length)]; ctx.fillText(text, i*fontSize, drops[i]*fontSize); if(drops[i]*fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++; } }
         setInterval(drawMatrix, 50);
 
         const KNOWN_TOKENS = { "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263": "BONK", "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": "WIF" };
