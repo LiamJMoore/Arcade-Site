@@ -1,982 +1,1134 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from “react”;
-import * as Papa from “papaparse”;
-import * as XLSX from “sheetjs”;
-import {
-LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
-XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-RadialBarChart, RadialBar, ComposedChart
-} from “recharts”;
-import {
-Upload, FileSpreadsheet, TrendingUp, Users, Calendar, BarChart3,
-ChevronDown, ChevronUp, AlertTriangle, CheckCircle, Clock, Zap,
-ArrowUpRight, ArrowDownRight, Minus, Filter, Download, RefreshCw,
-Layers, Activity, Target, Award, Sun, Moon
-} from “lucide-react”;
+#!/usr/bin/env python3
+“””
+MULTI-WEEK PLANNED JOBS ANALYSER v3.0 — LEGENDARY EDITION
+══════════════════════════════════════════════════════════
+A professional-grade desktop analytics tool for operational job management.
+Analyses multiple weeks of planned job data to surface trends, team performance,
+completion rates, and actionable insights across SPEN & ENW contracts.
 
-// ─── COLOUR PALETTE ───
-const P = {
-bg: “#0B0F1A”,
-card: “#111827”,
-cardHover: “#1a2235”,
-border: “#1E293B”,
-borderLight: “#334155”,
-text: “#E2E8F0”,
-textMuted: “#94A3B8”,
-textDim: “#64748B”,
-accent: “#3B82F6”,
-accentGlow: “rgba(59,130,246,0.15)”,
-green: “#10B981”,
-greenGlow: “rgba(16,185,129,0.15)”,
-amber: “#F59E0B”,
-amberGlow: “rgba(245,158,11,0.15)”,
-red: “#EF4444”,
-redGlow: “rgba(239,68,68,0.15)”,
-purple: “#8B5CF6”,
-purpleGlow: “rgba(139,92,246,0.15)”,
-cyan: “#06B6D4”,
-white: “#FFFFFF”,
-gradient1: “linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)”,
-gradient2: “linear-gradient(135deg, #10B981 0%, #06B6D4 100%)”,
-gradient3: “linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)”,
-};
+Requirements:
+pip install pandas openpyxl matplotlib
 
-const CHART_COLORS = [”#3B82F6”, “#10B981”, “#F59E0B”, “#EF4444”, “#8B5CF6”, “#06B6D4”, “#EC4899”, “#14B8A6”];
+Usage:
+python planned_jobs_analyser_v3.py
 
-// ─── MOCK DATA GENERATOR ───
-function generateMockData() {
-const teams = [“Alpha-01”, “Bravo-02”, “Charlie-03”, “Delta-04”, “Echo-05”, “Foxtrot-06”];
-const statuses = [“Site Clear”, “In Progress”, “Scheduled”, “On Hold”, “Cancelled”];
-const workTypes = [“New Connection”, “Repair”, “Maintenance”, “Emergency”, “Upgrade”, “Inspection”];
-const pms = [“Colin Donnelly”, “John Ashton”, “Ian Jones”, “Christine McNally”, “Steven Norton”, “James Tattersfield”];
-const postcodes = [“LL57”, “LL55”, “CH5”, “CH6”, “CW1”, “WA1”, “BL1”, “BL3”, “M1”, “M4”];
-const contracts = [“SPEN”, “ENW”];
+Author: Built for SPEN/ENW Operations
+“””
 
-const weeks = [];
-const baseDate = new Date(2025, 1, 3);
+import sys
+import os
+import re
+import json
+import glob
+import threading
+import webbrowser
+from datetime import datetime, timedelta
+from collections import defaultdict
+from pathlib import Path
 
-for (let w = 0; w < 8; w++) {
-const weekDate = new Date(baseDate);
-weekDate.setDate(weekDate.getDate() + w * 7);
-const jobCount = 80 + Math.floor(Math.random() * 60);
-const jobs = [];
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 
-```
-for (let j = 0; j < jobCount; j++) {
-  const statusWeights = [0.35 + w * 0.02, 0.25, 0.2 - w * 0.01, 0.12, 0.08];
-  let r = Math.random(), statusIdx = 0, cum = 0;
-  for (let s = 0; s < statusWeights.length; s++) {
-    cum += statusWeights[s];
-    if (r < cum) { statusIdx = s; break; }
-  }
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+from openpyxl.utils import get_column_letter
+from openpyxl.chart import PieChart, BarChart, LineChart, Reference, BarChart3D
+from openpyxl.chart.label import DataLabelList
+from openpyxl.chart.series import DataPoint
+from openpyxl.formatting.rule import CellIsRule, DataBarRule
 
-  jobs.push({
-    "Job ID": `JOB-${(w * 1000 + j + 10000).toString()}`,
-    "Job Status": statuses[statusIdx],
-    "Gang Ref": teams[Math.floor(Math.random() * teams.length)],
-    "Work Type": workTypes[Math.floor(Math.random() * workTypes.length)],
-    "Project Manager": pms[Math.floor(Math.random() * pms.length)],
-    "Postcode": postcodes[Math.floor(Math.random() * postcodes.length)],
-    "Contract": contracts[Math.floor(Math.random() * contracts.length)],
-    "Date From": weekDate.toISOString().split("T")[0],
-  });
-}
-weeks.push({ date: weekDate, jobs, label: weekDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) });
-```
+import matplotlib
+matplotlib.use(‘TkAgg’)
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.ticker as mticker
 
-}
-return weeks;
+# ═══════════════════════════════════════════════════════════════
+
+# THEME & STYLING
+
+# ═══════════════════════════════════════════════════════════════
+
+DARK = {
+‘bg’:         ‘#0B0F1A’,
+‘card’:       ‘#111827’,
+‘card_alt’:   ‘#1A2332’,
+‘border’:     ‘#1E293B’,
+‘fg’:         ‘#E2E8F0’,
+‘fg_muted’:   ‘#94A3B8’,
+‘fg_dim’:     ‘#64748B’,
+‘accent’:     ‘#3B82F6’,
+‘green’:      ‘#10B981’,
+‘amber’:      ‘#F59E0B’,
+‘red’:        ‘#EF4444’,
+‘purple’:     ‘#8B5CF6’,
+‘cyan’:       ‘#06B6D4’,
+‘white’:      ‘#FFFFFF’,
+‘entry_bg’:   ‘#1E293B’,
+‘btn_primary’:’#3B82F6’,
+‘btn_success’:’#10B981’,
+‘btn_warning’:’#F59E0B’,
+‘btn_danger’: ‘#EF4444’,
+‘btn_purple’: ‘#8B5CF6’,
 }
 
-// ─── STAT CARD ───
-function StatCard({ title, value, subtitle, icon: Icon, color, glow, trend, trendValue }) {
-return (
-<div style={{
-background: P.card, borderRadius: 16, padding: “20px 24px”, border: `1px solid ${P.border}`,
-position: “relative”, overflow: “hidden”, transition: “all 0.3s ease”,
-cursor: “default”, minWidth: 0,
-}}
-onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.boxShadow = `0 0 30px ${glow}`; }}
-onMouseLeave={e => { e.currentTarget.style.borderColor = P.border; e.currentTarget.style.boxShadow = “none”; }}
->
-<div style={{ position: “absolute”, top: -20, right: -20, width: 80, height: 80, borderRadius: “50%”, background: glow }} />
-<div style={{ display: “flex”, justifyContent: “space-between”, alignItems: “flex-start”, position: “relative”, zIndex: 1 }}>
-<div style={{ minWidth: 0 }}>
-<div style={{ fontSize: 12, color: P.textMuted, textTransform: “uppercase”, letterSpacing: 1.5, marginBottom: 8, fontWeight: 600 }}>{title}</div>
-<div style={{ fontSize: 32, fontWeight: 800, color: P.white, letterSpacing: -1, lineHeight: 1 }}>{value}</div>
-{subtitle && <div style={{ fontSize: 12, color: P.textDim, marginTop: 6 }}>{subtitle}</div>}
-{trend && (
-<div style={{ display: “flex”, alignItems: “center”, gap: 4, marginTop: 8, fontSize: 12, fontWeight: 600,
-color: trend === “up” ? P.green : trend === “down” ? P.red : P.textMuted }}>
-{trend === “up” ? <ArrowUpRight size={14} /> : trend === “down” ? <ArrowDownRight size={14} /> : <Minus size={14} />}
-{trendValue}
-</div>
-)}
-</div>
-<div style={{ width: 44, height: 44, borderRadius: 12, background: glow, display: “flex”, alignItems: “center”, justifyContent: “center”, flexShrink: 0 }}>
-<Icon size={22} color={color} />
-</div>
-</div>
-</div>
-);
+# Chart colour cycle
+
+CHART_COLORS = [’#3B82F6’,’#10B981’,’#F59E0B’,’#EF4444’,’#8B5CF6’,’#06B6D4’,’#EC4899’,’#14B8A6’,’#F97316’,’#6366F1’]
+STATUS_COLORS = {
+‘Site Clear’:  ‘#10B981’,
+‘In Progress’: ‘#3B82F6’,
+‘Scheduled’:   ‘#F59E0B’,
+‘On Hold’:     ‘#EF4444’,
+‘Cancelled’:   ‘#64748B’,
 }
 
-// ─── CHART CARD WRAPPER ───
-function ChartCard({ title, subtitle, children, span = 1 }) {
-return (
-<div style={{
-background: P.card, borderRadius: 16, border: `1px solid ${P.border}`, padding: 24,
-gridColumn: `span ${span}`, minHeight: 320,
-}}>
-<div style={{ marginBottom: 20 }}>
-<div style={{ fontSize: 16, fontWeight: 700, color: P.white }}>{title}</div>
-{subtitle && <div style={{ fontSize: 12, color: P.textDim, marginTop: 4 }}>{subtitle}</div>}
-</div>
-{children}
-</div>
-);
+# Excel styling constants
+
+XL_DARK_HEADER   = PatternFill(‘solid’, fgColor=‘0B0F1A’)
+XL_ACCENT_HEADER = PatternFill(‘solid’, fgColor=‘3B82F6’)
+XL_GREEN_FILL    = PatternFill(‘solid’, fgColor=‘D1FAE5’)
+XL_RED_FILL      = PatternFill(‘solid’, fgColor=‘FEE2E2’)
+XL_AMBER_FILL    = PatternFill(‘solid’, fgColor=‘FEF3C7’)
+XL_LIGHT_ROW     = PatternFill(‘solid’, fgColor=‘F1F5F9’)
+XL_WHITE_ROW     = PatternFill(‘solid’, fgColor=‘FFFFFF’)
+XL_PURPLE_FILL   = PatternFill(‘solid’, fgColor=‘EDE9FE’)
+
+XL_HEADER_FONT   = Font(name=‘Aptos’, bold=True, color=‘FFFFFF’, size=11)
+XL_TITLE_FONT    = Font(name=‘Aptos’, bold=True, color=‘0B0F1A’, size=16)
+XL_SUBTITLE_FONT = Font(name=‘Aptos’, bold=True, color=‘3B82F6’, size=12)
+XL_BODY_FONT     = Font(name=‘Aptos’, size=10, color=‘334155’)
+XL_BOLD_FONT     = Font(name=‘Aptos’, bold=True, size=10, color=‘0F172A’)
+XL_KPI_FONT      = Font(name=‘Aptos’, bold=True, size=28, color=‘0B0F1A’)
+XL_KPI_LABEL     = Font(name=‘Aptos’, size=10, color=‘64748B’)
+
+XL_BORDER = Border(
+bottom=Side(style=‘thin’, color=‘E2E8F0’),
+top=Side(style=‘thin’, color=‘E2E8F0’),
+left=Side(style=‘thin’, color=‘E2E8F0’),
+right=Side(style=‘thin’, color=‘E2E8F0’)
+)
+XL_THICK_BOTTOM = Border(bottom=Side(style=‘medium’, color=‘3B82F6’))
+
+# ═══════════════════════════════════════════════════════════════
+
+# SETTINGS MANAGER
+
+# ═══════════════════════════════════════════════════════════════
+
+class Settings:
+def **init**(self):
+self.path = Path.home() / ‘.jobs_analyser_settings.json’
+self.defaults = {
+‘auto_open’: True,
+‘charts_in_excel’: True,
+‘last_dir’: str(Path.home() / ‘Downloads’),
+‘period_days’: 28,
+‘window_geometry’: ‘1200x820’,
 }
-
-// ─── MINI SPARKLINE ───
-function Sparkline({ data, color, height = 40 }) {
-if (!data || data.length < 2) return null;
-const max = Math.max(…data);
-const min = Math.min(…data);
-const range = max - min || 1;
-const w = 120, h = height;
-const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(” “);
-return (
-<svg width={w} height={h} style={{ display: “block” }}>
-<polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-</svg>
-);
-}
-
-// ─── MAIN APP ───
-export default function PlannedJobsAnalyser() {
-const [data, setData] = useState(null);
-const [selectedWeekIdx, setSelectedWeekIdx] = useState(null);
-const [filterTeam, setFilterTeam] = useState(“All”);
-const [filterPM, setFilterPM] = useState(“All”);
-const [filterContract, setFilterContract] = useState(“All”);
-const [activeTab, setActiveTab] = useState(“overview”);
-const [isLoading, setIsLoading] = useState(false);
-const fileInputRef = useRef(null);
-
-// Load demo data
-const loadDemo = useCallback(() => {
-setIsLoading(true);
-setTimeout(() => {
-setData(generateMockData());
-setIsLoading(false);
-}, 600);
-}, []);
-
-// Parse uploaded files
-const handleFiles = useCallback(async (e) => {
-const files = Array.from(e.target.files);
-if (!files.length) return;
-setIsLoading(true);
+self.data = self._load()
 
 ```
-try {
-  const weeks = [];
-  for (const file of files) {
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet);
+def _load(self):
+    try:
+        if self.path.exists():
+            with open(self.path) as f:
+                d = json.load(f)
+            for k, v in self.defaults.items():
+                d.setdefault(k, v)
+            return d
+    except Exception:
+        pass
+    return dict(self.defaults)
 
-    // Extract date from filename or first row
-    let fileDate = new Date();
-    const dateMatch = file.name.match(/(\d{4}[-_]?\d{2}[-_]?\d{2})/);
-    if (dateMatch) {
-      fileDate = new Date(dateMatch[1].replace(/_/g, "-"));
-    } else if (json[0]?.["Date From"]) {
-      fileDate = new Date(json[0]["Date From"]);
-    }
+def save(self):
+    try:
+        with open(self.path, 'w') as f:
+            json.dump(self.data, f, indent=2)
+    except Exception:
+        pass
 
-    weeks.push({
-      date: fileDate,
-      jobs: json.map(row => {
-        const clean = {};
-        Object.keys(row).forEach(k => { clean[k.trim()] = row[k]; });
-        return clean;
-      }),
-      label: fileDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
-      filename: file.name,
-    });
-  }
+def get(self, key, default=None):
+    return self.data.get(key, default)
 
-  weeks.sort((a, b) => a.date - b.date);
-  setData(weeks);
-} catch (err) {
-  console.error("Parse error:", err);
-}
-setIsLoading(false);
+def set(self, key, val):
+    self.data[key] = val
+    self.save()
 ```
 
-}, []);
+# ═══════════════════════════════════════════════════════════════
 
-// ─── DERIVED ANALYTICS ───
-const analytics = useMemo(() => {
-if (!data) return null;
+# DATA LOADING & CLEANING
 
-```
-const allJobs = data.flatMap(w => w.jobs);
-const totalJobs = allJobs.length;
-const teams = [...new Set(allJobs.map(j => j["Gang Ref"]).filter(Boolean))].sort();
-const pms = [...new Set(allJobs.map(j => j["Project Manager"]).filter(Boolean))].sort();
-const contracts = [...new Set(allJobs.map(j => j["Contract"]).filter(Boolean))].sort();
-const statuses = [...new Set(allJobs.map(j => j["Job Status"]).filter(Boolean))].sort();
+# ═══════════════════════════════════════════════════════════════
 
-// Apply filters
-const filtered = allJobs.filter(j =>
-  (filterTeam === "All" || j["Gang Ref"] === filterTeam) &&
-  (filterPM === "All" || j["Project Manager"] === filterPM) &&
-  (filterContract === "All" || j["Contract"] === filterContract)
-);
+def extract_date_from_filename(filepath):
+“”“Try to pull a date from the filename.”””
+name = os.path.basename(filepath)
+patterns = [
+(r’(\d{4})-(\d{2})-(\d{2})’, ‘%Y-%m-%d’),
+(r’(\d{2})-(\d{2})-(\d{4})’, ‘%d-%m-%Y’),
+(r’(\d{4})(\d{2})(\d{2})’, ‘%Y%m%d’),
+(r’(\d{2})*(\d{2})*(\d{4})’, ‘%d_%m_%Y’),
+(r’(\d{4})*(\d{2})*(\d{2})’, ‘%Y_%m_%d’),
+]
+for pattern, fmt in patterns:
+m = re.search(pattern, name)
+if m:
+try:
+date_str = m.group(0)
+return pd.to_datetime(date_str, format=fmt)
+except Exception:
+continue
+return None
 
-// Status counts
-const statusCounts = {};
-filtered.forEach(j => { statusCounts[j["Job Status"]] = (statusCounts[j["Job Status"]] || 0) + 1; });
-
-const completed = statusCounts["Site Clear"] || 0;
-const inProgress = statusCounts["In Progress"] || 0;
-const scheduled = statusCounts["Scheduled"] || 0;
-const completionRate = filtered.length > 0 ? ((completed / filtered.length) * 100).toFixed(1) : 0;
-
-// Weekly trend data
-const weeklyTrend = data.map((w, i) => {
-  const wFiltered = w.jobs.filter(j =>
-    (filterTeam === "All" || j["Gang Ref"] === filterTeam) &&
-    (filterPM === "All" || j["Project Manager"] === filterPM) &&
-    (filterContract === "All" || j["Contract"] === filterContract)
-  );
-  const wStatuses = {};
-  wFiltered.forEach(j => { wStatuses[j["Job Status"]] = (wStatuses[j["Job Status"]] || 0) + 1; });
-  return {
-    name: w.label,
-    total: wFiltered.length,
-    completed: wStatuses["Site Clear"] || 0,
-    inProgress: wStatuses["In Progress"] || 0,
-    scheduled: wStatuses["Scheduled"] || 0,
-    onHold: wStatuses["On Hold"] || 0,
-    completionRate: wFiltered.length > 0 ? +((wStatuses["Site Clear"] || 0) / wFiltered.length * 100).toFixed(1) : 0,
-  };
-});
-
-// Trend direction
-const recentTotal = weeklyTrend.slice(-2);
-const totalTrend = recentTotal.length === 2
-  ? (recentTotal[1].total > recentTotal[0].total ? "up" : recentTotal[1].total < recentTotal[0].total ? "down" : "flat")
-  : "flat";
-const totalTrendVal = recentTotal.length === 2
-  ? `${Math.abs(recentTotal[1].total - recentTotal[0].total)} vs prev week`
-  : "";
-
-const compTrend = recentTotal.length === 2
-  ? (recentTotal[1].completionRate > recentTotal[0].completionRate ? "up" : recentTotal[1].completionRate < recentTotal[0].completionRate ? "down" : "flat")
-  : "flat";
-const compTrendVal = recentTotal.length === 2
-  ? `${Math.abs(recentTotal[1].completionRate - recentTotal[0].completionRate).toFixed(1)}pp vs prev`
-  : "";
-
-// Team performance
-const teamPerf = {};
-filtered.forEach(j => {
-  const t = j["Gang Ref"] || "Unassigned";
-  if (!teamPerf[t]) teamPerf[t] = { name: t, total: 0, completed: 0, inProgress: 0, weeklyJobs: {} };
-  teamPerf[t].total++;
-  if (j["Job Status"] === "Site Clear") teamPerf[t].completed++;
-  if (j["Job Status"] === "In Progress") teamPerf[t].inProgress++;
-});
-// Build weekly sparkline per team
-data.forEach((w, wi) => {
-  w.jobs.forEach(j => {
-    const t = j["Gang Ref"] || "Unassigned";
-    if (teamPerf[t]) {
-      teamPerf[t].weeklyJobs[wi] = (teamPerf[t].weeklyJobs[wi] || 0) + 1;
-    }
-  });
-});
-const teamData = Object.values(teamPerf).map(t => ({
-  ...t,
-  completionRate: t.total > 0 ? +((t.completed / t.total) * 100).toFixed(1) : 0,
-  sparkline: data.map((_, wi) => t.weeklyJobs[wi] || 0),
-})).sort((a, b) => b.total - a.total);
-
-// PM performance
-const pmPerf = {};
-filtered.forEach(j => {
-  const p = j["Project Manager"] || "Unassigned";
-  if (!pmPerf[p]) pmPerf[p] = { name: p, total: 0, completed: 0 };
-  pmPerf[p].total++;
-  if (j["Job Status"] === "Site Clear") pmPerf[p].completed++;
-});
-const pmData = Object.values(pmPerf).map(p => ({
-  ...p,
-  completionRate: p.total > 0 ? +((p.completed / p.total) * 100).toFixed(1) : 0,
-})).sort((a, b) => b.total - a.total);
-
-// Work type breakdown
-const workTypes = {};
-filtered.forEach(j => {
-  const wt = j["Work Type"] || "Other";
-  workTypes[wt] = (workTypes[wt] || 0) + 1;
-});
-const workTypeData = Object.entries(workTypes).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-
-// Status pie
-const statusPie = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
-const statusColorMap = { "Site Clear": P.green, "In Progress": P.accent, "Scheduled": P.amber, "On Hold": P.red, "Cancelled": P.textDim };
-
-// Postcode heatmap data
-const postcodeData = {};
-filtered.forEach(j => {
-  const pc = (j["Postcode"] || "").substring(0, 3) || "Unknown";
-  postcodeData[pc] = (postcodeData[pc] || 0) + 1;
-});
-const postcodeChart = Object.entries(postcodeData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 12);
-
-return {
-  totalJobs, filtered: filtered.length, completed, inProgress, scheduled, completionRate,
-  teams, pms, contracts, statuses, weeklyTrend, totalTrend, totalTrendVal, compTrend, compTrendVal,
-  teamData, pmData, workTypeData, statusPie, statusColorMap, postcodeChart,
-  dateRange: data.length > 1
-    ? `${data[0].date.toLocaleDateString("en-GB")} — ${data[data.length - 1].date.toLocaleDateString("en-GB")}`
-    : data[0]?.date.toLocaleDateString("en-GB") || "",
-  weeksCount: data.length,
-};
-```
-
-}, [data, filterTeam, filterPM, filterContract]);
-
-// ─── RENDER: UPLOAD SCREEN ───
-if (!data) {
-return (
-<div style={{
-minHeight: “100vh”, background: P.bg, display: “flex”, flexDirection: “column”,
-alignItems: “center”, justifyContent: “center”, fontFamily: “‘Segoe UI’, system-ui, sans-serif”, padding: 20,
-}}>
-{/* Animated background */}
-<div style={{ position: “fixed”, inset: 0, overflow: “hidden”, pointerEvents: “none”, zIndex: 0 }}>
-<div style={{
-position: “absolute”, width: 600, height: 600, borderRadius: “50%”,
-background: “radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)”,
-top: “10%”, left: “20%”, animation: “float 20s ease-in-out infinite”,
-}} />
-<div style={{
-position: “absolute”, width: 400, height: 400, borderRadius: “50%”,
-background: “radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)”,
-bottom: “20%”, right: “15%”, animation: “float 15s ease-in-out infinite reverse”,
-}} />
-</div>
+def load_file(filepath):
+“”“Load an Excel/CSV file and return (DataFrame, date).”””
+ext = os.path.splitext(filepath)[1].lower()
+if ext == ‘.csv’:
+df = pd.read_csv(filepath)
+else:
+df = pd.read_excel(filepath)
 
 ```
-    <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 560 }}>
-      <div style={{
-        width: 80, height: 80, borderRadius: 24, background: P.accentGlow, border: `2px solid ${P.accent}`,
-        display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px",
-        boxShadow: `0 0 60px ${P.accentGlow}`,
-      }}>
-        <BarChart3 size={36} color={P.accent} />
-      </div>
+df.columns = df.columns.str.strip()
 
-      <h1 style={{ fontSize: 42, fontWeight: 800, color: P.white, margin: 0, letterSpacing: -1.5, lineHeight: 1.1 }}>
-        Multi-Week<br />
-        <span style={{ background: P.gradient1, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          Jobs Analyser
-        </span>
-      </h1>
-      <p style={{ fontSize: 16, color: P.textMuted, marginTop: 16, lineHeight: 1.6 }}>
-        Drop your weekly Excel exports to unlock trend analytics,<br />team performance tracking, and completion forecasting.
-      </p>
+# Determine file date
+file_date = extract_date_from_filename(filepath)
+if file_date is None and 'Date From' in df.columns:
+    try:
+        file_date = pd.to_datetime(df['Date From'].dropna().iloc[0])
+    except Exception:
+        pass
+if file_date is None:
+    try:
+        file_date = pd.Timestamp(datetime.fromtimestamp(os.path.getmtime(filepath)))
+    except Exception:
+        file_date = pd.Timestamp.now()
 
-      <div style={{ display: "flex", gap: 16, marginTop: 40, justifyContent: "center", flexWrap: "wrap" }}>
-        <button onClick={() => fileInputRef.current?.click()} style={{
-          padding: "16px 32px", borderRadius: 14, border: "none", background: P.gradient1,
-          color: P.white, fontSize: 16, fontWeight: 700, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: 10,
-          boxShadow: "0 4px 20px rgba(59,130,246,0.3)", transition: "transform 0.2s, box-shadow 0.2s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(59,130,246,0.4)"; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(59,130,246,0.3)"; }}
-        >
-          <Upload size={20} /> Upload Excel Files
-        </button>
-
-        <button onClick={loadDemo} style={{
-          padding: "16px 32px", borderRadius: 14, border: `2px solid ${P.border}`, background: "transparent",
-          color: P.textMuted, fontSize: 16, fontWeight: 600, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: 10, transition: "all 0.2s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = P.accent; e.currentTarget.style.color = P.white; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = P.border; e.currentTarget.style.color = P.textMuted; }}
-        >
-          <Zap size={20} /> Load Demo Data
-        </button>
-      </div>
-
-      <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" multiple
-        onChange={handleFiles} style={{ display: "none" }} />
-
-      <div style={{ display: "flex", gap: 32, marginTop: 48, justifyContent: "center", color: P.textDim, fontSize: 13 }}>
-        {[["8-Week Trends", TrendingUp], ["Team Analytics", Users], ["Completion Rates", Target]].map(([label, Icon]) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Icon size={14} /> {label}
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {isLoading && (
-      <div style={{
-        position: "fixed", inset: 0, background: "rgba(11,15,26,0.9)", display: "flex",
-        alignItems: "center", justifyContent: "center", zIndex: 100,
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: 48, height: 48, border: `3px solid ${P.border}`, borderTop: `3px solid ${P.accent}`,
-            borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px",
-          }} />
-          <div style={{ color: P.textMuted, fontSize: 14 }}>Processing files...</div>
-        </div>
-      </div>
-    )}
-
-    <style>{`
-      @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, -30px); } }
-      @keyframes spin { to { transform: rotate(360deg); } }
-    `}</style>
-  </div>
-);
+df['_analysis_date'] = file_date
+df['_source_file'] = os.path.basename(filepath)
+return df, file_date
 ```
 
-}
+# ═══════════════════════════════════════════════════════════════
 
-// ─── RENDER: DASHBOARD ───
-const a = analytics;
-const tabs = [
-{ id: “overview”, label: “Overview”, icon: Layers },
-{ id: “trends”, label: “Trends”, icon: TrendingUp },
-{ id: “teams”, label: “Teams”, icon: Users },
-{ id: “managers”, label: “Managers”, icon: Award },
-{ id: “breakdown”, label: “Breakdown”, icon: BarChart3 },
-];
+# ANALYTICS ENGINE
 
-const CustomTooltip = ({ active, payload, label }) => {
-if (!active || !payload?.length) return null;
-return (
-<div style={{
-background: “#1E293B”, border: `1px solid ${P.border}`, borderRadius: 10, padding: “10px 14px”,
-boxShadow: “0 8px 24px rgba(0,0,0,0.4)”,
-}}>
-<div style={{ fontSize: 12, color: P.textMuted, marginBottom: 6 }}>{label}</div>
-{payload.map((p, i) => (
-<div key={i} style={{ display: “flex”, alignItems: “center”, gap: 8, fontSize: 13, color: P.text, marginTop: 2 }}>
-<div style={{ width: 8, height: 8, borderRadius: “50%”, background: p.color }} />
-{p.name}: <span style={{ fontWeight: 700, color: P.white }}>{p.value}</span>
-</div>
-))}
-</div>
-);
-};
+# ═══════════════════════════════════════════════════════════════
 
-return (
-<div style={{
-minHeight: “100vh”, background: P.bg, fontFamily: “‘Segoe UI’, system-ui, sans-serif”, color: P.text,
-}}>
-{/* ─── HEADER ─── */}
-<div style={{
-background: “rgba(17,24,39,0.8)”, backdropFilter: “blur(20px)”, borderBottom: `1px solid ${P.border}`,
-position: “sticky”, top: 0, zIndex: 50, padding: “0 24px”,
-}}>
-<div style={{ maxWidth: 1400, margin: “0 auto”, display: “flex”, alignItems: “center”, justifyContent: “space-between”, height: 64 }}>
-<div style={{ display: “flex”, alignItems: “center”, gap: 12 }}>
-<div style={{ width: 36, height: 36, borderRadius: 10, background: P.accentGlow, border: `1.5px solid ${P.accent}`,
-display: “flex”, alignItems: “center”, justifyContent: “center” }}>
-<BarChart3 size={18} color={P.accent} />
-</div>
-<div>
-<div style={{ fontSize: 16, fontWeight: 700, color: P.white }}>Jobs Analyser</div>
-<div style={{ fontSize: 11, color: P.textDim }}>{a.dateRange} · {a.weeksCount} weeks · {a.filtered.toLocaleString()} jobs</div>
-</div>
-</div>
+class AnalyticsEngine:
+“”“Crunches all the numbers from loaded data.”””
 
 ```
-      {/* Filters */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {[
-          { label: "Team", value: filterTeam, setter: setFilterTeam, options: a.teams },
-          { label: "PM", value: filterPM, setter: setFilterPM, options: a.pms },
-          { label: "Contract", value: filterContract, setter: setFilterContract, options: a.contracts },
-        ].map(f => (
-          <select key={f.label} value={f.value} onChange={e => f.setter(e.target.value)} style={{
-            background: "#1E293B", border: `1px solid ${P.border}`, borderRadius: 8, padding: "6px 12px",
-            color: P.text, fontSize: 12, cursor: "pointer", outline: "none",
-          }}>
-            <option value="All">All {f.label}s</option>
-            {f.options.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        ))}
+def __init__(self, all_data):
+    """all_data: list of (DataFrame, Timestamp) tuples sorted by date."""
+    self.all_data = sorted(all_data, key=lambda x: x[1])
+    self.combined = pd.concat([df for df, _ in self.all_data], ignore_index=True)
 
-        <button onClick={() => { setData(null); setFilterTeam("All"); setFilterPM("All"); setFilterContract("All"); }} style={{
-          background: "transparent", border: `1px solid ${P.border}`, borderRadius: 8,
-          padding: "6px 12px", color: P.textMuted, fontSize: 12, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: 4,
-        }}>
-          <RefreshCw size={12} /> New Analysis
-        </button>
-      </div>
-    </div>
-  </div>
+@property
+def date_range(self):
+    return (self.all_data[0][1], self.all_data[-1][1])
 
-  {/* ─── TABS ─── */}
-  <div style={{ maxWidth: 1400, margin: "0 auto", padding: "16px 24px 0" }}>
-    <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${P.border}`, paddingBottom: 0 }}>
-      {tabs.map(t => (
-        <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-          padding: "10px 20px", border: "none", borderBottom: activeTab === t.id ? `2px solid ${P.accent}` : "2px solid transparent",
-          background: "transparent", color: activeTab === t.id ? P.white : P.textDim,
-          fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-          transition: "all 0.2s",
-        }}>
-          <t.icon size={15} /> {t.label}
-        </button>
-      ))}
-    </div>
-  </div>
+@property
+def total_files(self):
+    return len(self.all_data)
 
-  {/* ─── CONTENT ─── */}
-  <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px" }}>
+@property
+def total_jobs(self):
+    return len(self.combined)
 
-    {/* OVERVIEW TAB */}
-    {activeTab === "overview" && (
-      <>
-        {/* Stat cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <StatCard title="Total Jobs" value={a.filtered.toLocaleString()} subtitle={`Across ${a.weeksCount} weeks`}
-            icon={FileSpreadsheet} color={P.accent} glow={P.accentGlow} trend={a.totalTrend} trendValue={a.totalTrendVal} />
-          <StatCard title="Completion Rate" value={`${a.completionRate}%`} subtitle={`${a.completed} completed`}
-            icon={Target} color={P.green} glow={P.greenGlow} trend={a.compTrend} trendValue={a.compTrendVal} />
-          <StatCard title="In Progress" value={a.inProgress.toLocaleString()} subtitle="Active right now"
-            icon={Activity} color={P.amber} glow={P.amberGlow} />
-          <StatCard title="Active Teams" value={a.teamData.length} subtitle="Across all weeks"
-            icon={Users} color={P.purple} glow={P.purpleGlow} />
-        </div>
+@property
+def date_span_days(self):
+    return (self.date_range[1] - self.date_range[0]).days + 1
 
-        {/* Charts row */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 }}>
-          <ChartCard title="Weekly Job Volume & Completion" subtitle="Stacked area showing job pipeline over time">
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={a.weeklyTrend}>
-                <defs>
-                  <linearGradient id="gComplete" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={P.green} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={P.green} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gProgress" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={P.accent} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={P.accent} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gScheduled" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={P.amber} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={P.amber} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="completed" stackId="1" stroke={P.green} fill="url(#gComplete)" name="Completed" />
-                <Area type="monotone" dataKey="inProgress" stackId="1" stroke={P.accent} fill="url(#gProgress)" name="In Progress" />
-                <Area type="monotone" dataKey="scheduled" stackId="1" stroke={P.amber} fill="url(#gScheduled)" name="Scheduled" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
+def status_summary(self):
+    return self.combined['Job Status'].value_counts().to_dict()
 
-          <ChartCard title="Status Distribution" subtitle="Current split across all weeks">
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={a.statusPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={90}
-                  paddingAngle={3} stroke="none">
-                  {a.statusPie.map((entry, i) => (
-                    <Cell key={i} fill={a.statusColorMap[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+def completion_rate(self):
+    ss = self.status_summary()
+    total = sum(ss.values())
+    return (ss.get('Site Clear', 0) / total * 100) if total > 0 else 0
 
-        {/* Bottom row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <ChartCard title="Top Teams by Volume" subtitle="Total jobs assigned per team">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={a.teamData.slice(0, 8)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis type="number" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis dataKey="name" type="category" tick={{ fill: P.textDim, fontSize: 11 }} width={80} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="completed" stackId="a" fill={P.green} name="Completed" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="inProgress" stackId="a" fill={P.accent} name="In Progress" />
-                <Bar dataKey="total" fill="none" name="" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+def daily_trends(self):
+    """Per-file date breakdown."""
+    rows = []
+    for df, dt in self.all_data:
+        sc = df['Job Status'].value_counts()
+        rows.append({
+            'date': dt,
+            'label': dt.strftime('%d %b'),
+            'total': len(df),
+            'completed': sc.get('Site Clear', 0),
+            'in_progress': sc.get('In Progress', 0),
+            'scheduled': sc.get('Scheduled', 0),
+            'on_hold': sc.get('On Hold', 0),
+            'cancelled': sc.get('Cancelled', 0),
+            'completion_rate': (sc.get('Site Clear', 0) / len(df) * 100) if len(df) > 0 else 0,
+        })
+    return rows
 
-          <ChartCard title="Jobs by Postcode Area" subtitle="Geographic distribution of work">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={a.postcodeChart}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Jobs" radius={[6, 6, 0, 0]}>
-                  {a.postcodeChart.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-      </>
-    )}
+def team_performance(self):
+    """Per-team aggregated metrics."""
+    if 'Gang Ref' not in self.combined.columns:
+        return []
+    teams = {}
+    for _, row in self.combined.iterrows():
+        t = row.get('Gang Ref', 'Unassigned')
+        if pd.isna(t):
+            t = 'Unassigned'
+        if t not in teams:
+            teams[t] = {'name': t, 'total': 0, 'completed': 0, 'in_progress': 0, 'weekly': defaultdict(int)}
+        teams[t]['total'] += 1
+        if row.get('Job Status') == 'Site Clear':
+            teams[t]['completed'] += 1
+        if row.get('Job Status') == 'In Progress':
+            teams[t]['in_progress'] += 1
 
-    {/* TRENDS TAB */}
-    {activeTab === "trends" && (
-      <>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 16 }}>
-          <ChartCard title="Completion Rate Trend" subtitle="Weekly completion percentage trajectory" span={1}>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={a.weeklyTrend}>
-                <defs>
-                  <linearGradient id="gRate" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={P.green} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={P.green} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis yAxisId="left" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} domain={[0, 100]} unit="%" />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar yAxisId="left" dataKey="total" fill={P.accent} name="Total Jobs" radius={[4, 4, 0, 0]} opacity={0.6} />
-                <Line yAxisId="right" type="monotone" dataKey="completionRate" stroke={P.green} strokeWidth={3}
-                  name="Completion %" dot={{ fill: P.green, r: 5, strokeWidth: 2, stroke: P.card }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+    # Weekly sparkline data
+    for i, (df, dt) in enumerate(self.all_data):
+        if 'Gang Ref' in df.columns:
+            for _, row in df.iterrows():
+                t = row.get('Gang Ref', 'Unassigned')
+                if pd.isna(t):
+                    t = 'Unassigned'
+                if t in teams:
+                    teams[t]['weekly'][i] += 1
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <ChartCard title="Job Volume Trend" subtitle="Total jobs per reporting period">
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={a.weeklyTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="total" stroke={P.accent} strokeWidth={2.5} name="Total"
-                  dot={{ fill: P.accent, r: 4, strokeWidth: 2, stroke: P.card }} />
-                <Line type="monotone" dataKey="completed" stroke={P.green} strokeWidth={2} name="Completed" strokeDasharray="5 5"
-                  dot={{ fill: P.green, r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartCard>
+    result = []
+    for t in teams.values():
+        t['completion_rate'] = (t['completed'] / t['total'] * 100) if t['total'] > 0 else 0
+        t['sparkline'] = [t['weekly'].get(i, 0) for i in range(len(self.all_data))]
+        result.append(t)
+    return sorted(result, key=lambda x: x['total'], reverse=True)
 
-          <ChartCard title="On Hold / Cancelled Trend" subtitle="Tracking blockers over time">
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={a.weeklyTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="onHold" stroke={P.red} fill={P.redGlow} name="On Hold" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+def pm_performance(self):
+    """Per-PM aggregated metrics."""
+    col = 'Project Manager'
+    if col not in self.combined.columns:
+        return []
+    pms = {}
+    for _, row in self.combined.iterrows():
+        p = row.get(col, 'Unassigned')
+        if pd.isna(p):
+            p = 'Unassigned'
+        if p not in pms:
+            pms[p] = {'name': p, 'total': 0, 'completed': 0}
+        pms[p]['total'] += 1
+        if row.get('Job Status') == 'Site Clear':
+            pms[p]['completed'] += 1
+    for p in pms.values():
+        p['completion_rate'] = (p['completed'] / p['total'] * 100) if p['total'] > 0 else 0
+    return sorted(pms.values(), key=lambda x: x['total'], reverse=True)
 
-        {/* Week-over-week table */}
-        <div style={{ marginTop: 16 }}>
-          <ChartCard title="Week-over-Week Comparison" subtitle="Detailed weekly breakdown">
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    {["Week", "Total", "Completed", "In Progress", "Scheduled", "On Hold", "Completion %", "Δ Total", "Δ Rate"].map(h => (
-                      <th key={h} style={{
-                        padding: "10px 14px", textAlign: "left", borderBottom: `2px solid ${P.border}`,
-                        color: P.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1,
-                        fontWeight: 600, whiteSpace: "nowrap",
-                      }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {a.weeklyTrend.map((w, i) => {
-                    const prev = i > 0 ? a.weeklyTrend[i - 1] : null;
-                    const deltaTotal = prev ? w.total - prev.total : 0;
-                    const deltaRate = prev ? (w.completionRate - prev.completionRate).toFixed(1) : 0;
-                    return (
-                      <tr key={i} style={{ borderBottom: `1px solid ${P.border}` }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.05)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                        <td style={{ padding: "10px 14px", fontWeight: 600, color: P.white }}>{w.name}</td>
-                        <td style={{ padding: "10px 14px", fontWeight: 700, color: P.white }}>{w.total}</td>
-                        <td style={{ padding: "10px 14px", color: P.green }}>{w.completed}</td>
-                        <td style={{ padding: "10px 14px", color: P.accent }}>{w.inProgress}</td>
-                        <td style={{ padding: "10px 14px", color: P.amber }}>{w.scheduled}</td>
-                        <td style={{ padding: "10px 14px", color: P.red }}>{w.onHold}</td>
-                        <td style={{ padding: "10px 14px" }}>
-                          <span style={{
-                            padding: "2px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600,
-                            background: w.completionRate >= 40 ? P.greenGlow : w.completionRate >= 25 ? P.amberGlow : P.redGlow,
-                            color: w.completionRate >= 40 ? P.green : w.completionRate >= 25 ? P.amber : P.red,
-                          }}>{w.completionRate}%</span>
-                        </td>
-                        <td style={{ padding: "10px 14px", color: deltaTotal > 0 ? P.green : deltaTotal < 0 ? P.red : P.textDim, fontWeight: 600 }}>
-                          {i > 0 ? (deltaTotal > 0 ? "+" : "") + deltaTotal : "—"}
-                        </td>
-                        <td style={{ padding: "10px 14px", color: deltaRate > 0 ? P.green : deltaRate < 0 ? P.red : P.textDim, fontWeight: 600 }}>
-                          {i > 0 ? (deltaRate > 0 ? "+" : "") + deltaRate + "pp" : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ChartCard>
-        </div>
-      </>
-    )}
+def work_type_breakdown(self):
+    if 'Work Type' not in self.combined.columns:
+        return {}
+    return self.combined['Work Type'].value_counts().to_dict()
 
-    {/* TEAMS TAB */}
-    {activeTab === "teams" && (
-      <>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-          <ChartCard title="Team Completion Rates" subtitle="Percentage of jobs completed per team">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={a.teamData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis type="number" domain={[0, 100]} tick={{ fill: P.textDim, fontSize: 11 }} unit="%" axisLine={{ stroke: P.border }} />
-                <YAxis dataKey="name" type="category" tick={{ fill: P.textDim, fontSize: 11 }} width={90} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="completionRate" name="Completion %" radius={[0, 6, 6, 0]}>
-                  {a.teamData.map((t, i) => (
-                    <Cell key={i} fill={t.completionRate >= 40 ? P.green : t.completionRate >= 25 ? P.amber : P.red} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+def postcode_breakdown(self):
+    if 'Postcode' not in self.combined.columns:
+        return {}
+    pc = self.combined['Postcode'].dropna().str[:3]
+    return pc.value_counts().head(15).to_dict()
 
-          <ChartCard title="Team Workload Distribution" subtitle="Jobs per team breakdown">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={a.teamData} dataKey="total" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={95}
-                  paddingAngle={2} stroke="none">
-                  {a.teamData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+def contract_breakdown(self):
+    if 'Contract' not in self.combined.columns:
+        return {}
+    return self.combined['Contract'].value_counts().to_dict()
 
-        {/* Team detail table */}
-        <ChartCard title="Team Performance Detail" subtitle="Full breakdown with sparkline trends">
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13 }}>
-              <thead>
-                <tr>
-                  {["Team", "Total Jobs", "Completed", "In Progress", "Completion %", "Trend"].map(h => (
-                    <th key={h} style={{
-                      padding: "10px 14px", textAlign: "left", borderBottom: `2px solid ${P.border}`,
-                      color: P.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600,
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {a.teamData.map((t, i) => (
-                  <tr key={i} onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.05)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <td style={{ padding: "10px 14px", fontWeight: 600, color: P.white }}>{t.name}</td>
-                    <td style={{ padding: "10px 14px", fontWeight: 700, color: P.white }}>{t.total}</td>
-                    <td style={{ padding: "10px 14px", color: P.green }}>{t.completed}</td>
-                    <td style={{ padding: "10px 14px", color: P.accent }}>{t.inProgress}</td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <span style={{
-                        padding: "2px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600,
-                        background: t.completionRate >= 40 ? P.greenGlow : t.completionRate >= 25 ? P.amberGlow : P.redGlow,
-                        color: t.completionRate >= 40 ? P.green : t.completionRate >= 25 ? P.amber : P.red,
-                      }}>{t.completionRate}%</span>
-                    </td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <Sparkline data={t.sparkline} color={CHART_COLORS[i % CHART_COLORS.length]} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </ChartCard>
-      </>
-    )}
-
-    {/* MANAGERS TAB */}
-    {activeTab === "managers" && (
-      <>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-          <ChartCard title="PM Job Volumes" subtitle="Total jobs assigned to each project manager">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={a.pmData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 10 }} axisLine={{ stroke: P.border }} angle={-20} textAnchor="end" height={60} />
-                <YAxis tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="total" name="Total Jobs" radius={[6, 6, 0, 0]}>
-                  {a.pmData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="PM Completion Rates" subtitle="Percentage completed per manager">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={a.pmData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis type="number" domain={[0, 100]} unit="%" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis dataKey="name" type="category" tick={{ fill: P.textDim, fontSize: 10 }} width={130} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="completionRate" name="Completion %" radius={[0, 6, 6, 0]}>
-                  {a.pmData.map((p, i) => (
-                    <Cell key={i} fill={p.completionRate >= 40 ? P.green : p.completionRate >= 25 ? P.amber : P.red} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        {/* PM Leaderboard */}
-        <ChartCard title="Project Manager Leaderboard" subtitle="Ranked by completion rate">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginTop: 8 }}>
-            {a.pmData.sort((a, b) => b.completionRate - a.completionRate).map((pm, i) => (
-              <div key={pm.name} style={{
-                background: i === 0 ? "rgba(16,185,129,0.08)" : "rgba(30,41,59,0.5)",
-                border: `1px solid ${i === 0 ? "rgba(16,185,129,0.3)" : P.border}`,
-                borderRadius: 12, padding: 16, display: "flex", alignItems: "center", gap: 14,
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-                  background: i === 0 ? P.greenGlow : i === 1 ? P.accentGlow : i === 2 ? P.amberGlow : "rgba(100,116,139,0.1)",
-                  color: i === 0 ? P.green : i === 1 ? P.accent : i === 2 ? P.amber : P.textDim,
-                  fontWeight: 800, fontSize: 14,
-                }}>{i + 1}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: P.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{pm.name}</div>
-                  <div style={{ fontSize: 11, color: P.textDim }}>{pm.total} jobs · {pm.completed} completed</div>
-                </div>
-                <div style={{
-                  fontSize: 16, fontWeight: 800,
-                  color: pm.completionRate >= 40 ? P.green : pm.completionRate >= 25 ? P.amber : P.red,
-                }}>{pm.completionRate}%</div>
-              </div>
-            ))}
-          </div>
-        </ChartCard>
-      </>
-    )}
-
-    {/* BREAKDOWN TAB */}
-    {activeTab === "breakdown" && (
-      <>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-          <ChartCard title="Work Type Distribution" subtitle="Jobs categorised by work type">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={a.workTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95}
-                  paddingAngle={2} stroke="none">
-                  {a.workTypeData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="Work Type Volume" subtitle="Bar breakdown of work categories">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={a.workTypeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis dataKey="name" tick={{ fill: P.textDim, fontSize: 10 }} axisLine={{ stroke: P.border }} angle={-15} textAnchor="end" height={60} />
-                <YAxis tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Jobs" radius={[6, 6, 0, 0]}>
-                  {a.workTypeData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        {/* Geographic & Contract */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <ChartCard title="Geographic Spread" subtitle="Jobs by postcode area">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={a.postcodeChart} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={P.border} />
-                <XAxis type="number" tick={{ fill: P.textDim, fontSize: 11 }} axisLine={{ stroke: P.border }} />
-                <YAxis dataKey="name" type="category" tick={{ fill: P.textDim, fontSize: 11 }} width={50} axisLine={{ stroke: P.border }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Jobs" radius={[0, 6, 6, 0]}>
-                  {a.postcodeChart.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="Weekly Volume Heatmap" subtitle="Job counts per week summary">
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(a.weeklyTrend.length, 8)}, 1fr)`, gap: 8, marginTop: 8 }}>
-              {a.weeklyTrend.map((w, i) => {
-                const maxTotal = Math.max(...a.weeklyTrend.map(x => x.total));
-                const intensity = maxTotal > 0 ? w.total / maxTotal : 0;
-                return (
-                  <div key={i} style={{
-                    borderRadius: 12, padding: 14, textAlign: "center",
-                    background: `rgba(59,130,246,${0.05 + intensity * 0.2})`,
-                    border: `1px solid rgba(59,130,246,${0.1 + intensity * 0.3})`,
-                  }}>
-                    <div style={{ fontSize: 11, color: P.textDim, marginBottom: 6 }}>{w.name}</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: P.white }}>{w.total}</div>
-                    <div style={{ fontSize: 11, color: P.green, marginTop: 4 }}>{w.completionRate}%</div>
-                  </div>
-                );
-              })}
-            </div>
-          </ChartCard>
-        </div>
-      </>
-    )}
-  </div>
-
-  {/* Footer */}
-  <div style={{
-    textAlign: "center", padding: "24px", color: P.textDim, fontSize: 11,
-    borderTop: `1px solid ${P.border}`, marginTop: 24,
-  }}>
-    Multi-Week Jobs Analyser v2.0 · Built for SPEN & ENW Operations
-  </div>
-</div>
+def week_over_week_deltas(self):
+    trends = self.daily_trends()
+    deltas = []
+    for i, t in enumerate(trends):
+        d = dict(t)
+        if i > 0:
+            prev = trends[i - 1]
+            d['delta_total'] = t['total'] - prev['total']
+            d['delta_rate'] = round(t['completion_rate'] - prev['completion_rate'], 1)
+        else:
+            d['delta_total'] = 0
+            d['delta_rate'] = 0.0
+        deltas.append(d)
+    return deltas
 ```
 
-);
-}
+# ═══════════════════════════════════════════════════════════════
+
+# EXCEL REPORT GENERATOR
+
+# ═══════════════════════════════════════════════════════════════
+
+def _xl_header(ws, row, headers):
+for c, h in enumerate(headers, 1):
+cell = ws.cell(row=row, column=c, value=h)
+cell.fill = XL_DARK_HEADER
+cell.font = XL_HEADER_FONT
+cell.alignment = Alignment(horizontal=‘center’, vertical=‘center’, wrap_text=True)
+cell.border = XL_BORDER
+
+def _xl_data_rows(ws, start, data_rows, headers_count):
+for i, row_data in enumerate(data_rows):
+fill = XL_LIGHT_ROW if i % 2 == 0 else XL_WHITE_ROW
+for c, val in enumerate(row_data, 1):
+cell = ws.cell(row=start + i, column=c, value=val)
+cell.font = XL_BODY_FONT
+cell.fill = fill
+cell.border = XL_BORDER
+cell.alignment = Alignment(vertical=‘center’, wrap_text=True)
+
+def _xl_auto_width(ws, max_col, max_w=45):
+for c in range(1, max_col + 1):
+mx = 0
+for row in ws.iter_rows(min_col=c, max_col=c, values_only=False):
+for cell in row:
+if cell.value:
+mx = max(mx, len(str(cell.value)))
+ws.column_dimensions[get_column_letter(c)].width = min(mx + 4, max_w)
+
+def _xl_write_table(ws, row, headers, data):
+_xl_header(ws, row, headers)
+if data:
+_xl_data_rows(ws, row + 1, data, len(headers))
+_xl_auto_width(ws, len(headers))
+return row + len(data) + 2
+
+def generate_excel_report(engine, output_dir, settings=None):
+“”“Generate the full multi-sheet Excel report.”””
+wb = Workbook()
+
+```
+# ─── SHEET 1: EXECUTIVE DASHBOARD ───
+ws = wb.active
+ws.title = 'Executive Dashboard'
+ws.sheet_properties.tabColor = '3B82F6'
+ws.sheet_view.showGridLines = False
+
+r = 1
+ws.cell(row=r, column=1, value='MULTI-WEEK OPERATIONS REPORT').font = XL_TITLE_FONT
+r += 1
+dr = engine.date_range
+ws.cell(row=r, column=1, value=f'{dr[0].strftime("%d %b %Y")} — {dr[1].strftime("%d %b %Y")}  ·  {engine.total_files} reporting periods  ·  Generated {datetime.now().strftime("%d %b %Y %H:%M")}').font = Font(name='Aptos', size=10, color='64748B')
+r += 2
+
+# KPI Row
+ss = engine.status_summary()
+kpis = [
+    ('Total Jobs', engine.total_jobs),
+    ('Site Clear', ss.get('Site Clear', 0)),
+    ('In Progress', ss.get('In Progress', 0)),
+    ('Completion Rate', f'{engine.completion_rate():.1f}%'),
+    ('Active Teams', len(engine.team_performance())),
+    ('Reporting Period', f'{engine.date_span_days} days'),
+]
+for i, (label, val) in enumerate(kpis):
+    col = 1 + i * 2
+    ws.cell(row=r, column=col, value=val).font = XL_KPI_FONT
+    ws.cell(row=r + 1, column=col, value=label).font = XL_KPI_LABEL
+r += 4
+
+# Trend table
+ws.cell(row=r, column=1, value='WEEKLY TRENDS').font = XL_SUBTITLE_FONT
+r += 1
+trends = engine.daily_trends()
+headers = ['Date', 'Total', 'Completed', 'In Progress', 'Scheduled', 'On Hold', 'Completion %']
+trend_data = [(t['label'], t['total'], t['completed'], t['in_progress'], t['scheduled'],
+               t['on_hold'], f"{t['completion_rate']:.1f}%") for t in trends]
+trend_start = r
+r = _xl_write_table(ws, r, headers, trend_data)
+
+# Conditional formatting on completion rate column
+for i, t in enumerate(trends):
+    cell = ws.cell(row=trend_start + 1 + i, column=7)
+    if t['completion_rate'] >= 40:
+        cell.fill = XL_GREEN_FILL
+        cell.font = Font(name='Aptos', bold=True, size=10, color='065F46')
+    elif t['completion_rate'] >= 25:
+        cell.fill = XL_AMBER_FILL
+        cell.font = Font(name='Aptos', bold=True, size=10, color='92400E')
+    else:
+        cell.fill = XL_RED_FILL
+        cell.font = Font(name='Aptos', bold=True, size=10, color='991B1B')
+
+# Line chart: trends over time
+try:
+    chart = LineChart()
+    chart.title = 'Job Volume & Completion Trend'
+    chart.height = 14
+    chart.width = 24
+    chart.y_axis.title = 'Count'
+
+    data_ref = Reference(ws, min_col=2, min_row=trend_start, max_col=5, max_row=trend_start + len(trends))
+    cats = Reference(ws, min_col=1, min_row=trend_start + 1, max_row=trend_start + len(trends))
+    chart.add_data(data_ref, titles_from_data=True)
+    chart.set_categories(cats)
+
+    for i, color in enumerate(['3B82F6', '10B981', 'F59E0B', 'EF4444']):
+        if i < len(chart.series):
+            chart.series[i].graphicalProperties.line.solidFill = color
+
+    chart.dataLabels = DataLabelList()
+    chart.dataLabels.showVal = False
+    ws.add_chart(chart, f'A{r}')
+    r += 16
+except Exception:
+    r += 1
+
+# ─── SHEET 2: TEAM PERFORMANCE ───
+ws2 = wb.create_sheet('Team Performance')
+ws2.sheet_properties.tabColor = '10B981'
+ws2.sheet_view.showGridLines = False
+
+r2 = 1
+ws2.cell(row=r2, column=1, value='TEAM PERFORMANCE ANALYSIS').font = XL_TITLE_FONT
+r2 += 2
+
+team_data = engine.team_performance()
+if team_data:
+    headers = ['Team', 'Total Jobs', 'Completed', 'In Progress', 'Completion %', 'Rank']
+    rows = []
+    for i, t in enumerate(sorted(team_data, key=lambda x: x['completion_rate'], reverse=True)):
+        rows.append((t['name'], t['total'], t['completed'], t['in_progress'],
+                    f"{t['completion_rate']:.1f}%", i + 1))
+    team_start = r2
+    r2 = _xl_write_table(ws2, r2, headers, rows)
+
+    # Colour the completion rate and rank
+    for i, t in enumerate(sorted(team_data, key=lambda x: x['completion_rate'], reverse=True)):
+        rate_cell = ws2.cell(row=team_start + 1 + i, column=5)
+        rank_cell = ws2.cell(row=team_start + 1 + i, column=6)
+        if t['completion_rate'] >= 40:
+            rate_cell.fill = XL_GREEN_FILL
+            rate_cell.font = Font(name='Aptos', bold=True, size=10, color='065F46')
+        elif t['completion_rate'] >= 25:
+            rate_cell.fill = XL_AMBER_FILL
+        else:
+            rate_cell.fill = XL_RED_FILL
+
+        if i == 0:
+            rank_cell.fill = PatternFill('solid', fgColor='FEF08A')
+            rank_cell.font = Font(name='Aptos', bold=True, size=10, color='854D0E')
+
+    # Team bar chart
+    try:
+        chart2 = BarChart()
+        chart2.type = 'col'
+        chart2.title = 'Team Job Volumes'
+        chart2.height = 14
+        chart2.width = 22
+
+        data_ref = Reference(ws2, min_col=2, min_row=team_start, max_col=4, max_row=team_start + len(rows))
+        cats = Reference(ws2, min_col=1, min_row=team_start + 1, max_row=team_start + len(rows))
+        chart2.add_data(data_ref, titles_from_data=True)
+        chart2.set_categories(cats)
+
+        for i, color in enumerate(['3B82F6', '10B981', 'F59E0B']):
+            if i < len(chart2.series):
+                chart2.series[i].graphicalProperties.solidFill = color
+
+        ws2.add_chart(chart2, f'A{r2}')
+        r2 += 16
+    except Exception:
+        pass
+
+    # Team weekly breakdown
+    ws2.cell(row=r2, column=1, value='TEAM WEEKLY BREAKDOWN').font = XL_SUBTITLE_FONT
+    r2 += 1
+    all_labels = [t['label'] for t in trends]
+    tw_headers = ['Team'] + all_labels + ['Total', 'Avg/Week']
+    tw_rows = []
+    for t in team_data:
+        row_vals = [t['name']] + t['sparkline']
+        row_vals.append(t['total'])
+        num_weeks = max(len(t['sparkline']), 1)
+        row_vals.append(f"{t['total'] / num_weeks:.1f}")
+        tw_rows.append(row_vals)
+    _xl_write_table(ws2, r2, tw_headers, tw_rows)
+
+# ─── SHEET 3: PM LEADERBOARD ───
+ws3 = wb.create_sheet('PM Leaderboard')
+ws3.sheet_properties.tabColor = '8B5CF6'
+ws3.sheet_view.showGridLines = False
+
+r3 = 1
+ws3.cell(row=r3, column=1, value='PROJECT MANAGER LEADERBOARD').font = XL_TITLE_FONT
+r3 += 2
+
+pm_data = engine.pm_performance()
+if pm_data:
+    pm_sorted = sorted(pm_data, key=lambda x: x['completion_rate'], reverse=True)
+    headers = ['Rank', 'Project Manager', 'Total Jobs', 'Completed', 'Completion %']
+    rows = [(i + 1, p['name'], p['total'], p['completed'], f"{p['completion_rate']:.1f}%")
+            for i, p in enumerate(pm_sorted)]
+    pm_start = r3
+    r3 = _xl_write_table(ws3, r3, headers, rows)
+
+    for i, p in enumerate(pm_sorted):
+        cell = ws3.cell(row=pm_start + 1 + i, column=5)
+        if p['completion_rate'] >= 40:
+            cell.fill = XL_GREEN_FILL
+        elif p['completion_rate'] >= 25:
+            cell.fill = XL_AMBER_FILL
+        else:
+            cell.fill = XL_RED_FILL
+
+    try:
+        chart3 = BarChart()
+        chart3.type = 'bar'
+        chart3.title = 'PM Completion Rates'
+        chart3.height = 12
+        chart3.width = 20
+
+        # We need numeric values for chart, so write them separately
+        pm_chart_start = r3 + 1
+        ws3.cell(row=pm_chart_start, column=1, value='PM').font = XL_HEADER_FONT
+        ws3.cell(row=pm_chart_start, column=2, value='Rate %').font = XL_HEADER_FONT
+        for i, p in enumerate(pm_sorted):
+            ws3.cell(row=pm_chart_start + 1 + i, column=1, value=p['name'])
+            ws3.cell(row=pm_chart_start + 1 + i, column=2, value=round(p['completion_rate'], 1))
+
+        data_ref = Reference(ws3, min_col=2, min_row=pm_chart_start, max_row=pm_chart_start + len(pm_sorted))
+        cats = Reference(ws3, min_col=1, min_row=pm_chart_start + 1, max_row=pm_chart_start + len(pm_sorted))
+        chart3.add_data(data_ref, titles_from_data=True)
+        chart3.set_categories(cats)
+        if chart3.series:
+            chart3.series[0].graphicalProperties.solidFill = '8B5CF6'
+        ws3.add_chart(chart3, f'D{pm_start}')
+    except Exception:
+        pass
+
+# ─── SHEET 4: WEEK-OVER-WEEK ───
+ws4 = wb.create_sheet('Week-over-Week')
+ws4.sheet_properties.tabColor = 'F59E0B'
+ws4.sheet_view.showGridLines = False
+
+r4 = 1
+ws4.cell(row=r4, column=1, value='WEEK-OVER-WEEK COMPARISON').font = XL_TITLE_FONT
+r4 += 2
+
+wow = engine.week_over_week_deltas()
+if wow:
+    headers = ['Date', 'Total', 'Completed', 'In Progress', 'Scheduled', 'On Hold',
+               'Completion %', 'Δ Total', 'Δ Rate (pp)']
+    rows = []
+    for w in wow:
+        delta_t = w['delta_total']
+        delta_r = w['delta_rate']
+        dt_str = f"+{delta_t}" if delta_t > 0 else str(delta_t) if delta_t != 0 else "—"
+        dr_str = f"+{delta_r}" if delta_r > 0 else str(delta_r) if delta_r != 0 else "—"
+        rows.append((w['label'], w['total'], w['completed'], w['in_progress'], w['scheduled'],
+                    w['on_hold'], f"{w['completion_rate']:.1f}%", dt_str, dr_str))
+    wow_start = r4
+    r4 = _xl_write_table(ws4, r4, headers, rows)
+
+    # Colour delta columns
+    for i, w in enumerate(wow):
+        dt_cell = ws4.cell(row=wow_start + 1 + i, column=8)
+        dr_cell = ws4.cell(row=wow_start + 1 + i, column=9)
+        if w['delta_total'] > 0:
+            dt_cell.font = Font(name='Aptos', bold=True, size=10, color='065F46')
+        elif w['delta_total'] < 0:
+            dt_cell.font = Font(name='Aptos', bold=True, size=10, color='991B1B')
+        if w['delta_rate'] > 0:
+            dr_cell.font = Font(name='Aptos', bold=True, size=10, color='065F46')
+        elif w['delta_rate'] < 0:
+            dr_cell.font = Font(name='Aptos', bold=True, size=10, color='991B1B')
+
+# ─── SHEET 5: ALL JOBS ───
+ws5 = wb.create_sheet('All Jobs')
+ws5.sheet_properties.tabColor = '06B6D4'
+ws5.sheet_view.showGridLines = False
+
+r5 = 1
+ws5.cell(row=r5, column=1, value='CONSOLIDATED JOB LIST').font = XL_TITLE_FONT
+r5 += 2
+
+cols = ['_analysis_date', 'Job ID', 'Job Status', 'Gang Ref', 'Work Type',
+        'Project Manager', 'Postcode', 'Contract']
+cols_available = [c for c in cols if c in engine.combined.columns]
+
+display_names = {'_analysis_date': 'Report Date'}
+_xl_header(ws5, r5, [display_names.get(c, c) for c in cols_available])
+
+for i, (_, row) in enumerate(engine.combined[cols_available].iterrows()):
+    for c_idx, col_name in enumerate(cols_available, 1):
+        val = row[col_name]
+        if hasattr(val, 'strftime'):
+            val = val.strftime('%Y-%m-%d')
+        cell = ws5.cell(row=r5 + 1 + i, column=c_idx, value=val)
+        cell.font = XL_BODY_FONT
+        cell.border = XL_BORDER
+
+        # Status colour coding
+        status = row.get('Job Status', '')
+        if c_idx == 1:  # Apply fill to whole row based on status
+            pass
+    # Row fill by status
+    status = row.get('Job Status', '')
+    if status == 'Site Clear':
+        fill = XL_GREEN_FILL
+    elif status == 'In Progress':
+        fill = PatternFill('solid', fgColor='DBEAFE')
+    elif status == 'Scheduled':
+        fill = XL_AMBER_FILL
+    elif status == 'On Hold':
+        fill = XL_RED_FILL
+    else:
+        fill = XL_WHITE_ROW if i % 2 else XL_LIGHT_ROW
+    for c_idx in range(1, len(cols_available) + 1):
+        ws5.cell(row=r5 + 1 + i, column=c_idx).fill = fill
+
+_xl_auto_width(ws5, len(cols_available))
+last_row = r5 + len(engine.combined)
+ws5.auto_filter.ref = f'A{r5}:{get_column_letter(len(cols_available))}{last_row}'
+ws5.freeze_panes = f'A{r5 + 1}'
+
+# ─── SAVE ───
+start_str = dr[0].strftime('%Y%m%d')
+end_str = dr[1].strftime('%Y%m%d')
+filename = f'multi_week_analysis_{start_str}_to_{end_str}.xlsx'
+output_path = os.path.join(output_dir, filename)
+wb.save(output_path)
+return output_path
+```
+
+# ═══════════════════════════════════════════════════════════════
+
+# MATPLOTLIB DASHBOARD CHARTS
+
+# ═══════════════════════════════════════════════════════════════
+
+def configure_mpl_dark():
+“”“Configure matplotlib for dark theme charts.”””
+plt.rcParams.update({
+‘figure.facecolor’: DARK[‘card’],
+‘axes.facecolor’: DARK[‘bg’],
+‘axes.edgecolor’: DARK[‘border’],
+‘axes.labelcolor’: DARK[‘fg_muted’],
+‘text.color’: DARK[‘fg’],
+‘xtick.color’: DARK[‘fg_dim’],
+‘ytick.color’: DARK[‘fg_dim’],
+‘grid.color’: DARK[‘border’],
+‘grid.alpha’: 0.5,
+‘font.family’: ‘sans-serif’,
+‘font.size’: 9,
+})
+
+def create_overview_figure(engine, width_px=1100, height_px=500):
+“”“Create the overview dashboard figure with 4 subplots.”””
+configure_mpl_dark()
+dpi = 100
+fig = Figure(figsize=(width_px / dpi, height_px / dpi), dpi=dpi)
+fig.patch.set_facecolor(DARK[‘card’])
+fig.subplots_adjust(hspace=0.45, wspace=0.35, left=0.06, right=0.96, top=0.92, bottom=0.1)
+
+```
+trends = engine.daily_trends()
+labels = [t['label'] for t in trends]
+
+# 1. Stacked area — job pipeline
+ax1 = fig.add_subplot(2, 2, 1)
+completed = [t['completed'] for t in trends]
+in_prog = [t['in_progress'] for t in trends]
+scheduled = [t['scheduled'] for t in trends]
+ax1.stackplot(labels, completed, in_prog, scheduled,
+              colors=[DARK['green'], DARK['accent'], DARK['amber']], alpha=0.8,
+              labels=['Completed', 'In Progress', 'Scheduled'])
+ax1.set_title('Job Pipeline', color=DARK['white'], fontsize=11, fontweight='bold', pad=10)
+ax1.legend(loc='upper left', fontsize=7, framealpha=0.3)
+ax1.tick_params(axis='x', rotation=30)
+
+# 2. Completion rate line
+ax2 = fig.add_subplot(2, 2, 2)
+rates = [t['completion_rate'] for t in trends]
+ax2.plot(labels, rates, color=DARK['green'], linewidth=2.5, marker='o', markersize=6,
+         markerfacecolor=DARK['white'], markeredgecolor=DARK['green'], markeredgewidth=2)
+ax2.fill_between(labels, rates, alpha=0.15, color=DARK['green'])
+ax2.set_title('Completion Rate %', color=DARK['white'], fontsize=11, fontweight='bold', pad=10)
+ax2.set_ylim(0, max(max(rates) * 1.2, 10))
+ax2.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.0f%%'))
+ax2.tick_params(axis='x', rotation=30)
+
+# 3. Status pie
+ax3 = fig.add_subplot(2, 2, 3)
+ss = engine.status_summary()
+if ss:
+    pie_labels = list(ss.keys())
+    pie_vals = list(ss.values())
+    pie_colors = [STATUS_COLORS.get(s, DARK['fg_dim']) for s in pie_labels]
+    wedges, texts, autotexts = ax3.pie(pie_vals, labels=pie_labels, colors=pie_colors,
+                                        autopct='%1.0f%%', startangle=90, pctdistance=0.8,
+                                        textprops={'fontsize': 8, 'color': DARK['fg']})
+    for at in autotexts:
+        at.set_fontsize(7)
+        at.set_color(DARK['white'])
+    ax3.set_title('Status Split', color=DARK['white'], fontsize=11, fontweight='bold', pad=10)
+
+# 4. Team bar chart
+ax4 = fig.add_subplot(2, 2, 4)
+team_data = engine.team_performance()[:8]
+if team_data:
+    t_names = [t['name'] for t in team_data]
+    t_completed = [t['completed'] for t in team_data]
+    t_other = [t['total'] - t['completed'] for t in team_data]
+    y_pos = range(len(t_names))
+    ax4.barh(y_pos, t_completed, color=DARK['green'], alpha=0.9, label='Completed', height=0.6)
+    ax4.barh(y_pos, t_other, left=t_completed, color=DARK['accent'], alpha=0.5, label='Other', height=0.6)
+    ax4.set_yticks(y_pos)
+    ax4.set_yticklabels(t_names, fontsize=8)
+    ax4.set_title('Team Volumes', color=DARK['white'], fontsize=11, fontweight='bold', pad=10)
+    ax4.legend(loc='lower right', fontsize=7, framealpha=0.3)
+    ax4.invert_yaxis()
+
+return fig
+```
+
+# ═══════════════════════════════════════════════════════════════
+
+# MAIN APPLICATION
+
+# ═══════════════════════════════════════════════════════════════
+
+class MultiWeekAnalyserApp:
+def **init**(self):
+self.settings = Settings()
+self.root = tk.Tk()
+self.root.title(‘Multi-Week Jobs Analyser v3.0’)
+
+```
+    geom = self.settings.get('window_geometry', '1200x820')
+    self.root.geometry(geom)
+    self.root.minsize(900, 650)
+    self.root.configure(bg=DARK['bg'])
+
+    # Try to set icon (won't fail if not available)
+    try:
+        self.root.iconname('Jobs Analyser')
+    except Exception:
+        pass
+
+    self.selected_files = []
+    self.engine = None
+    self.chart_canvas = None
+
+    self._build_ui()
+
+# ─── UI CONSTRUCTION ───
+
+def _build_ui(self):
+    bg = DARK['bg']
+
+    # Top bar
+    top = tk.Frame(self.root, bg=DARK['card'], height=60)
+    top.pack(fill='x')
+    top.pack_propagate(False)
+
+    title_frame = tk.Frame(top, bg=DARK['card'])
+    title_frame.pack(side='left', padx=20, pady=10)
+    tk.Label(title_frame, text='⚡ Multi-Week Jobs Analyser',
+             font=('Segoe UI', 18, 'bold'), bg=DARK['card'], fg=DARK['white']).pack(anchor='w')
+    self.subtitle_var = tk.StringVar(value='Load files to begin analysis')
+    tk.Label(title_frame, textvariable=self.subtitle_var,
+             font=('Segoe UI', 10), bg=DARK['card'], fg=DARK['fg_dim']).pack(anchor='w')
+
+    # Buttons in top bar
+    btn_frame = tk.Frame(top, bg=DARK['card'])
+    btn_frame.pack(side='right', padx=20, pady=10)
+
+    self._make_btn(btn_frame, '📁 Add Files', self.add_files, DARK['accent']).pack(side='left', padx=3)
+    self._make_btn(btn_frame, '🗂 Add Folder', self.add_folder, DARK['amber']).pack(side='left', padx=3)
+    self._make_btn(btn_frame, '🔍 Auto-Detect', self.auto_detect, DARK['purple']).pack(side='left', padx=3)
+    self._make_btn(btn_frame, '🗑 Clear', self.clear_files, DARK['red']).pack(side='left', padx=3)
+
+    # Main content — split into left panel (file list) and right panel (charts/results)
+    main = tk.PanedWindow(self.root, orient='horizontal', bg=bg, sashwidth=2, sashrelief='flat')
+    main.pack(fill='both', expand=True, padx=0, pady=0)
+
+    # Left panel
+    left = tk.Frame(main, bg=bg, width=320)
+    main.add(left, minsize=260)
+
+    # File list
+    file_label_frame = tk.Frame(left, bg=bg)
+    file_label_frame.pack(fill='x', padx=12, pady=(12, 4))
+    tk.Label(file_label_frame, text='SELECTED FILES', font=('Segoe UI', 9, 'bold'),
+             bg=bg, fg=DARK['fg_dim']).pack(side='left')
+    self.file_count_var = tk.StringVar(value='0')
+    tk.Label(file_label_frame, textvariable=self.file_count_var,
+             font=('Segoe UI', 9), bg=bg, fg=DARK['accent']).pack(side='right')
+
+    list_frame = tk.Frame(left, bg=DARK['card'], bd=1, relief='solid', highlightbackground=DARK['border'])
+    list_frame.pack(fill='both', expand=True, padx=12, pady=4)
+
+    scrollbar = tk.Scrollbar(list_frame, bg=DARK['border'])
+    scrollbar.pack(side='right', fill='y')
+
+    self.file_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
+                                    font=('Consolas', 9), height=15,
+                                    bg=DARK['card'], fg=DARK['fg'],
+                                    selectbackground=DARK['accent'],
+                                    selectforeground=DARK['white'],
+                                    bd=0, highlightthickness=0,
+                                    activestyle='none')
+    self.file_listbox.pack(side='left', fill='both', expand=True)
+    scrollbar.config(command=self.file_listbox.yview)
+
+    # Analyse button
+    self.analyse_btn = tk.Button(left, text='🚀  ANALYSE TRENDS', command=self._run,
+                                 font=('Segoe UI', 13, 'bold'),
+                                 bg=DARK['btn_success'], fg=DARK['white'],
+                                 activebackground='#059669', activeforeground=DARK['white'],
+                                 bd=0, padx=20, pady=12, cursor='hand2',
+                                 state='disabled', relief='flat')
+    self.analyse_btn.pack(fill='x', padx=12, pady=12)
+
+    # Status
+    status_frame = tk.Frame(left, bg=bg)
+    status_frame.pack(fill='x', padx=12, pady=(0, 8))
+
+    self.status_var = tk.StringVar(value='Ready')
+    self.status_label = tk.Label(status_frame, textvariable=self.status_var,
+                                 font=('Segoe UI', 9), bg=bg, fg=DARK['fg_muted'],
+                                 wraplength=280, justify='left', anchor='w')
+    self.status_label.pack(fill='x')
+
+    self.progress = ttk.Progressbar(status_frame, mode='indeterminate', length=280)
+    self.progress.pack(fill='x', pady=(4, 0))
+
+    # Right panel (charts)
+    self.right_panel = tk.Frame(main, bg=bg)
+    main.add(self.right_panel, minsize=500)
+
+    # Placeholder
+    self.placeholder = tk.Frame(self.right_panel, bg=bg)
+    self.placeholder.pack(fill='both', expand=True)
+
+    ph_inner = tk.Frame(self.placeholder, bg=bg)
+    ph_inner.place(relx=0.5, rely=0.5, anchor='center')
+
+    tk.Label(ph_inner, text='📊', font=('Segoe UI', 48), bg=bg, fg=DARK['fg_dim']).pack()
+    tk.Label(ph_inner, text='Add files and run analysis\nto see interactive charts here',
+             font=('Segoe UI', 14), bg=bg, fg=DARK['fg_dim'], justify='center').pack(pady=10)
+
+def _make_btn(self, parent, text, cmd, color):
+    return tk.Button(parent, text=text, command=cmd,
+                    font=('Segoe UI', 9, 'bold'), bg=color, fg=DARK['white'],
+                    activebackground=color, activeforeground=DARK['white'],
+                    bd=0, padx=12, pady=6, cursor='hand2', relief='flat')
+
+# ─── FILE MANAGEMENT ───
+
+def add_files(self):
+    files = filedialog.askopenfilenames(
+        title='Select Excel/CSV files',
+        initialdir=self.settings.get('last_dir'),
+        filetypes=[('Excel files', '*.xlsx *.xls'), ('CSV files', '*.csv'), ('All', '*.*')]
+    )
+    added = 0
+    for f in files:
+        if f not in self.selected_files:
+            self.selected_files.append(f)
+            added += 1
+    if files:
+        self.settings.set('last_dir', os.path.dirname(files[0]))
+    self._refresh_list()
+    if added:
+        self.status_var.set(f'✅ Added {added} file(s)')
+
+def add_folder(self):
+    folder = filedialog.askdirectory(
+        title='Select folder with Excel/CSV files',
+        initialdir=self.settings.get('last_dir')
+    )
+    if not folder:
+        return
+    added = 0
+    for ext in ('*.xlsx', '*.xls', '*.csv'):
+        for f in glob.glob(os.path.join(folder, ext)):
+            if f not in self.selected_files:
+                self.selected_files.append(f)
+                added += 1
+    self.settings.set('last_dir', folder)
+    self._refresh_list()
+    self.status_var.set(f'✅ Added {added} file(s) from folder' if added else '⚠️ No new files found')
+
+def auto_detect(self):
+    days = self.settings.get('period_days', 28)
+    cutoff = datetime.now() - timedelta(days=days)
+    search_dirs = [
+        Path.home() / 'Downloads',
+        Path.home() / 'Desktop',
+        Path(self.settings.get('last_dir', '')),
+    ]
+    keywords = ['job', 'planned', 'export', 'report', 'week', 'spen', 'enw']
+    added = 0
+    for d in search_dirs:
+        if not d.exists():
+            continue
+        for ext in ('*.xlsx', '*.xls', '*.csv'):
+            for f in d.glob(ext):
+                try:
+                    if f.stat().st_mtime < cutoff.timestamp():
+                        continue
+                    if any(kw in f.name.lower() for kw in keywords):
+                        fp = str(f)
+                        if fp not in self.selected_files:
+                            self.selected_files.append(fp)
+                            added += 1
+                except Exception:
+                    continue
+    self._refresh_list()
+    self.status_var.set(f'✅ Auto-detected {added} file(s) from last {days} days' if added else f'⚠️ No matching files in last {days} days')
+
+def clear_files(self):
+    self.selected_files = []
+    self._refresh_list()
+    self.engine = None
+    self._show_placeholder()
+    self.status_var.set('🗑 Cleared')
+
+def _refresh_list(self):
+    self.file_listbox.delete(0, tk.END)
+    try:
+        sorted_files = sorted(self.selected_files, key=lambda x: os.path.getmtime(x), reverse=True)
+    except Exception:
+        sorted_files = self.selected_files
+
+    for f in sorted_files:
+        name = os.path.basename(f)
+        try:
+            mt = datetime.fromtimestamp(os.path.getmtime(f)).strftime('%d %b')
+            display = f'{mt}  ·  {name}'
+        except Exception:
+            display = name
+        self.file_listbox.insert(tk.END, display)
+
+    n = len(self.selected_files)
+    self.file_count_var.set(f'{n} file{"s" if n != 1 else ""}')
+    self.analyse_btn.config(state='normal' if n > 0 else 'disabled')
+
+# ─── ANALYSIS ───
+
+def _run(self):
+    if not self.selected_files:
+        return
+    self.analyse_btn.config(state='disabled')
+    self.progress.start(12)
+    self.status_var.set('🔄 Loading and processing files...')
+
+    def work():
+        try:
+            all_data = []
+            failed = []
+            total = len(self.selected_files)
+
+            for i, fp in enumerate(self.selected_files):
+                self.root.after(0, lambda i=i: self.status_var.set(
+                    f'🔄 Processing file {i + 1}/{total}...'))
+                try:
+                    df, dt = load_file(fp)
+                    all_data.append((df, dt))
+                except Exception as e:
+                    failed.append((fp, str(e)))
+
+            if not all_data:
+                raise Exception('No files loaded successfully')
+
+            self.root.after(0, lambda: self.status_var.set('🔄 Crunching analytics...'))
+            engine = AnalyticsEngine(all_data)
+
+            self.root.after(0, lambda: self.status_var.set('🔄 Generating Excel report...'))
+            output_dir = os.path.dirname(os.path.abspath(self.selected_files[0]))
+            output_path = generate_excel_report(engine, output_dir, self.settings)
+
+            self.root.after(0, lambda: self._done(engine, output_path, failed))
+        except Exception as e:
+            self.root.after(0, lambda msg=str(e): self._error(msg))
+
+    threading.Thread(target=work, daemon=True).start()
+
+def _done(self, engine, output_path, failed):
+    self.progress.stop()
+    self.engine = engine
+    self.analyse_btn.config(state='normal')
+
+    dr = engine.date_range
+    days = engine.date_span_days
+    fail_msg = f'  ⚠️ {len(failed)} failed' if failed else ''
+
+    self.status_var.set(
+        f'✅ Done! {engine.total_files} files · {engine.total_jobs} jobs · '
+        f'{days} days · {engine.completion_rate():.1f}% completion{fail_msg}'
+    )
+    self.subtitle_var.set(
+        f'{dr[0].strftime("%d %b %Y")} — {dr[1].strftime("%d %b %Y")}  ·  '
+        f'{engine.total_files} files  ·  {engine.total_jobs:,} total jobs'
+    )
+
+    # Show charts
+    self._show_charts(engine)
+
+    # Ask to open
+    msg = (f'Analysis Complete!\n\n'
+           f'📅 Period: {dr[0].strftime("%d %b %Y")} — {dr[1].strftime("%d %b %Y")} ({days} days)\n'
+           f'📁 Files: {engine.total_files}\n'
+           f'📊 Jobs: {engine.total_jobs:,}\n'
+           f'✅ Completion: {engine.completion_rate():.1f}%\n'
+           f'👥 Teams: {len(engine.team_performance())}\n'
+           f'{fail_msg}\n\n'
+           f'Saved: {os.path.basename(output_path)}\n\n'
+           f'Open the Excel report now?')
+
+    if messagebox.askyesno('Analysis Complete', msg):
+        try:
+            os.startfile(output_path)
+        except AttributeError:
+            webbrowser.open(f'file://{output_path}')
+
+def _error(self, msg):
+    self.progress.stop()
+    self.analyse_btn.config(state='normal')
+    self.status_var.set(f'❌ {msg}')
+    messagebox.showerror('Error', f'Analysis failed:\n\n{msg}')
+
+# ─── CHART DISPLAY ───
+
+def _show_placeholder(self):
+    if self.chart_canvas:
+        self.chart_canvas.get_tk_widget().destroy()
+        self.chart_canvas = None
+    self.placeholder.pack(fill='both', expand=True)
+
+def _show_charts(self, engine):
+    self.placeholder.pack_forget()
+
+    if self.chart_canvas:
+        self.chart_canvas.get_tk_widget().destroy()
+
+    # Get actual pixel dimensions
+    self.right_panel.update_idletasks()
+    w = max(self.right_panel.winfo_width(), 600)
+    h = max(self.right_panel.winfo_height(), 400)
+
+    fig = create_overview_figure(engine, width_px=w, height_px=h)
+    self.chart_canvas = FigureCanvasTkAgg(fig, master=self.right_panel)
+    self.chart_canvas.draw()
+    self.chart_canvas.get_tk_widget().pack(fill='both', expand=True)
+
+# ─── RUN ───
+
+def run(self):
+    self.root.mainloop()
+```
+
+# ═══════════════════════════════════════════════════════════════
+
+# ENTRY POINT
+
+# ═══════════════════════════════════════════════════════════════
+
+if **name** == ‘**main**’:
+app = MultiWeekAnalyserApp()
+app.run()
